@@ -1,5 +1,5 @@
 const catchError = require('../utils/catchError');
-const Inventory = require('../models/Inventory');
+const Inventory = require('../models/Inventory,js');
 
 const getAll = catchError(async(req, res) => {
     const results = await Inventory.findAll();

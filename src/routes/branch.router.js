@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update } = require('../controllers/branch.controller');
+const { getAll, create, getOne, remove, update } = require('../controllers/branch.controller.js');
 const express = require('express');
 
 const routerBranch = express.Router();

@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update } = require('../controllers/role.controller');
+const { getAll, create, getOne, remove, update } = require('../controllers/role.controlle.js');
 const express = require('express');
 
 const routerRole = express.Router();

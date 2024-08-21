@@ -1,13 +1,13 @@
 const express = require('express');
-const routerCustomer = require('./customer.router');
-const routerInventory = require('./inventory.router');
-const routerMainData = require('./mainData.router');
-const routerPayment = require('./payment.router');
-const routerTransaction = require('./transaction.router');
-const routerUser = require('./user.router');
-const routerCategory = require('./category.router');
-const routerRole = require('./role.router');
-const routerBranch = require('./branch.router');
+const routerCustomer = require('./customer.router.js');
+const routerInventory = require('./inventory.router.js');
+const routerMainData = require('./mainData.router.js');
+const routerPayment = require('./payment.router.js');
+const routerTransaction = require('./transaction.router.js');
+const routerUser = require('./user.router.js');
+const routerCategory = require('./category.router.js');
+const routerRole = require('./role.router.js');
+const routerBranch = require('./branch.router.js');
 const router = express.Router();
 
 

@@ -1,33 +1,33 @@
 const catchError = require('../utils/catchError');
-const branch = require('../models/branch');
+const Branch = require('../models/Branch.js');
 
 const getAll = catchError(async(req, res) => {
-    const results = await branch.findAll();
+    const results = await Branch.findAll();
     return res.json(results);
 });
 
 const create = catchError(async(req, res) => {
-    const result = await branch.create(req.body);
+    const result = await Branch.create(req.body);
     return res.status(201).json(result);
 });
 
 const getOne = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await branch.findByPk(id);
+    const result = await Branch.findByPk(id);
     if(!result) return res.sendStatus(404);
     return res.json(result);
 });
 
 const remove = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await branch.destroy({ where: {id} });
+    const result = await Branch.destroy({ where: {id} });
     if(!result) return res.sendStatus(404);
     return res.sendStatus(204);
 });
 
 const update = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await branch.update(
+    const result = await Branch.update(
         req.body,
         { where: {id}, returning: true }
     );

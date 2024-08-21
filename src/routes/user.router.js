@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update, login ,logged} = require('../controllers/user.controller');
+const { getAll, create, getOne, remove, update, login ,logged} = require('../controllers/user.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
 

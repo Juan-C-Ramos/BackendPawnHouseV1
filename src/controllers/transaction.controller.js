@@ -1,6 +1,6 @@
 const catchError = require('../utils/catchError');
 const Transaction = require('../models/Transaction');
-const Payment = require('../models/Payment');
+const Payment = require('../models/Payment.js');
 
 const getAll = catchError(async(req, res) => {
     const results = await Transaction.findAll();

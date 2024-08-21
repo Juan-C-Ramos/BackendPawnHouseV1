@@ -1,11 +1,11 @@
-const Customer = require("./Customer")
-const Inventory = require("./Inventory")
-const User = require("./User")
-const Transaction = require("./Transaction")
-const Payment = require("./Payment")
-const Category = require("./Category")
-const Branch = require("./Branch")
-const Role = require("./Role")
+const Customer = require("./Customer.js")
+const Inventory = require("./Inventory.js")
+const User = require("./User.js")
+const Transaction = require("./Transaction.js")
+const Payment = require("./Payment.js")
+const Category = require("./Category.js")
+const Branch = require("./Branch.js")
+const Role = require("./Role.js")
 
 //Users -> Customerforce: true});
 Customer.belongsTo(User) //categoriesId

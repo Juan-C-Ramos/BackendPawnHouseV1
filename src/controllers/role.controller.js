@@ -1,5 +1,5 @@
 const catchError = require('../utils/catchError');
-const Role = require('../models/Role');
+const Role = require('../models/Role.js');
 
 const getAll = catchError(async(req, res) => {
     const results = await Role.findAll();
