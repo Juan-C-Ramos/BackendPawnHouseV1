@@ -35,6 +35,12 @@ const Transaction = sequelize.define('transaction', {
         allowNull: false
     },
 
+    balance: { 
+        type: DataTypes.FLOAT,
+        allowNull: false
+    },
+
+
     contract : {
         type: DataTypes.TEXT,
         allowNull: false
@@ -42,7 +48,7 @@ const Transaction = sequelize.define('transaction', {
     
     inventoryId : {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
     },
 
 
