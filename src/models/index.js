@@ -7,7 +7,7 @@ const Category = require("./Category.js")
 const Branch = require("./Branch.js")
 const Role = require("./Role.js")
 
-//Users -> Customerforce: true});
+//Users -> Customer);
 Customer.belongsTo(User) //categoriesId
 User.hasMany(Customer)
 
