@@ -32,6 +32,11 @@ const Customer = sequelize.define('customer', {
         allowNull: false
     },
 
+    photoID: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
+
     nacionality: {
         type: DataTypes.STRING,
         allowNull: false

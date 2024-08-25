@@ -8,6 +8,7 @@ const routerUser = require('./user.router.js');
 const routerCategory = require('./category.router.js');
 const routerRole = require('./role.router.js');
 const routerBranch = require('./branch.router.js');
+const routerImage = require('./image.router.js');
 const router = express.Router();
 
 
@@ -22,6 +23,7 @@ router.use('/users', routerUser),
 router.use('/categories', routerCategory),
 router.use('/roles', routerRole),
 router.use('/branches', routerBranch),
+router.use('/images', routerImage),
 
 
 module.exports = router;
