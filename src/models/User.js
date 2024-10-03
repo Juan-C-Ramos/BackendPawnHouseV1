@@ -28,13 +28,9 @@ const User = sequelize.define('user', {
         type: DataTypes.STRING,
         allowNull: false
     },
-
-    profileImg: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
     
     //roleId
+    //ProfilePhoto
     
 });
 

@@ -5,12 +5,12 @@ const { verifyJwt } = require('../utils/verifyJWT');
 const routerPayment = express.Router();
 
 routerPayment.route('/')
-    .get(verifyJwt, getAll) // 🔏🔐
-    .post(verifyJwt, create); // 🔏🔐
+    .get( getAll) // 🔏🔐
+    .post( create); // 🔏🔐
 
 routerPayment.route('/:id')
-    .get(verifyJwt, getOne) // 🔏🔐
-    .delete(verifyJwt, remove)  // 🔏🔐
-    .put(verifyJwt, update);  // 🔏🔐
+    .get( getOne) // 🔏🔐
+    .delete( remove)  // 🔏🔐
+    .put( update);  // 🔏🔐
 
 module.exports = routerPayment;

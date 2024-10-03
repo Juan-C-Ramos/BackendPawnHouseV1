@@ -1,10 +1,24 @@
 const catchError = require('../utils/catchError');
 const Inventory = require('../models/Inventory.js');
+const Category = require('../models/Category.js');
+const ImageInventory = require('../models/ImageInventory.js');
+const Branch = require('../models/Branch.js');
+const Transaction = require('../models/Transaction.js');
+const Customer = require('../models/Customer.js');
+const User = require('../models/User.js');
+const Role = require('../models/Role.js');
+const InventoryBill = require('../models/InventoryBill.js');
 
 const getAll = catchError(async(req, res) => {
-    const results = await Inventory.findAll();
+    const results = await Inventory.findAll({include: [Category, ImageInventory, Branch,
+        {
+            model: Transaction,
+            include: [Customer]
+        }
+    ]});
     return res.json(results);
 });
+
 
 const create = catchError(async(req, res) => {
     const result = await Inventory.create(req.body);
@@ -13,7 +27,7 @@ const create = catchError(async(req, res) => {
 
 const getOne = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await Inventory.findByPk(id);
+    const result = await Inventory.findByPk(id, {include: [Category, ImageInventory, Branch]});
     if(!result) return res.sendStatus(404);
     return res.json(result);
 });
@@ -35,10 +49,33 @@ const update = catchError(async(req, res) => {
     return res.json(result[1][0]);
 });
 
+
+const setImage = catchError(async(req, res) => {
+    const { id } = req.params;
+    const inventory = await Inventory.findByPk(id);
+    if(!inventory) return res.sendStatus(404);
+
+    await inventory.setImageInventories(req.body)
+    const images = await inventory.getImageInventories();
+
+    return res.status(200).json(images);
+});
+const setBillImage = catchError(async(req, res) => {
+    const { id } = req.params;
+    const inventory = await Inventory.findByPk(id);
+    if(!inventory) return res.sendStatus(404);
+
+    await inventory.setInventoryBill(req.body)
+    const images = await inventory.getInventoryBill();
+
+    return res.status(200).json(images);
+});
 module.exports = {
     getAll,
     create,
     getOne,
     remove,
-    update
+    update,
+    setImage,
+    setBillImage
 }

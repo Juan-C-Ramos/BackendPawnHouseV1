@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update } = require('../controllers/inventory.controller.js');
+const { getAll, create, getOne, remove, update, setImage, setBillImage } = require('../controllers/inventory.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
 
@@ -6,11 +6,18 @@ const routerInventory = express.Router();
 
 routerInventory.route('/')
     .get(getAll)
-    .post(verifyJwt, create);
+    .post( create);
+
+
+routerInventory.route('/:id/images')
+    .post(setImage);
+
+routerInventory.route('/:id/billImages')
+    .post(setBillImage);
 
 routerInventory.route('/:id')
     .get(getOne)
-    .delete(verifyJwt, remove)
-    .put(verifyJwt, update);
+    .delete( remove)
+    .put( update);
 
 module.exports = routerInventory;

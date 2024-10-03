@@ -14,12 +14,14 @@ const Customer = sequelize.define('customer', {
 
     email: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
+        unique: true
     },
 
     phone: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: false,
+        unique: true
     },
 
     typeID: {
@@ -29,12 +31,8 @@ const Customer = sequelize.define('customer', {
     
     numberID: {
         type: DataTypes.STRING,
-        allowNull: false
-    },
-
-    photoID: {
-        type: DataTypes.TEXT,
-        allowNull: false
+        allowNull: false,
+        unique: true
     },
 
     nacionality: {
@@ -85,7 +83,13 @@ const Customer = sequelize.define('customer', {
     notes: {
         type: DataTypes.TEXT,
         allowNull: false
+    },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'active'
     }
+    
 });
 
 module.exports = Customer;

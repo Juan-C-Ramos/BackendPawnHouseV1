@@ -5,6 +5,7 @@ const router = require('./routes');
 const errorHandler = require('./utils/errorHandler');
 require('dotenv').config();
 require('./models');
+const path = require('path');
 
 // Esta es nuestra aplicación
 const app = express();
@@ -15,6 +16,8 @@ app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
 app.use(cors());
+
+app.use(express.static(path.join(__dirname,)));
 
 app.use('/api/v1', router);
 

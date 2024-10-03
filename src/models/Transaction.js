@@ -7,18 +7,25 @@ const Transaction = sequelize.define('transaction', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    photoId: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
+
     amonunt: {
         type: DataTypes.FLOAT,
         allowNull: false
     },
-    interests: {
+
+    interestsType: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            isIn: [['amortizado', 'abonoCapital', 'otros']]
+          }
+    },
+
+    interestsPorcent: {
         type: DataTypes.FLOAT,
         allowNull: true
     },
+
 
     startDate: {
         type: DataTypes.DATEONLY,
@@ -32,7 +39,13 @@ const Transaction = sequelize.define('transaction', {
     
     cuotes: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
+    },
+
+    cuotesAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        defaultValue: 0.00
     },
 
     balance: { 
@@ -40,20 +53,30 @@ const Transaction = sequelize.define('transaction', {
         allowNull: false
     },
 
-
-    contract : {
-        type: DataTypes.TEXT,
+    capital: {
+        type: DataTypes.FLOAT,
         allowNull: false
     },
-    
-    inventoryId : {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
+
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'inProgress'
+    }, 
+    transactionType:{
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            isIn: [['prestamos', 'venta', 'empeño']]
+          }
+    }
 
 
-    // customersId
-    // usersId
+    //contractId
+    //inventoryBillId
+    //inventoriesId
+    //customersId
+    //usersId
 });
 
 module.exports = Transaction;

@@ -1,10 +1,14 @@
 const catchError = require('../utils/catchError');
 const User = require('../models/User.js');
 const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const ProfilePhoto = require('../models/ProfilPhoto.js');
+const Customer = require('../models/Customer.js');
+const Transaction = require('../models/Transaction.js');
+const Inventory = require('../models/Inventory.js');
 
 const getAll = catchError(async (req, res) => {
-  const results = await User.findAll();
+  const results = await User.findAll({include: [ProfilePhoto]});
   return res.json(results);
 });
 
@@ -25,7 +29,15 @@ const create = catchError(async (req, res) => {
 
 const getOne = catchError(async (req, res) => {
   const { id } = req.params;
-  const result = await User.findByPk(id);
+  const result = await User.findByPk(id, {include: [ProfilePhoto, Customer, 
+    {
+        model: Transaction,
+        as: 'transactions',
+        include: [Customer, Inventory]
+      
+  }
+]
+});
   if (!result) return res.sendStatus(404);
   return res.json(result);
 });
@@ -72,7 +84,7 @@ const login = catchError(async (req, res) => { //! -> /users/login
   const token = jwt.sign(
     { user },
     process.env.TOKEN_SECRET,
-    { expiresIn: '100d' }
+    { expiresIn: '1d' }
   )
 
   return res.json({ user, token })
@@ -80,9 +92,21 @@ const login = catchError(async (req, res) => { //! -> /users/login
 })
 
 const logged = catchError(async (req, res) => {
-  const user = req.user
+  const id = req.user.id
+  const user = await User.findByPk(id, {include: [ProfilePhoto, Customer, Transaction]});
   return res.json(user)
 })
+
+const setImage = catchError(async(req, res) => {
+  const { id } = req.params;
+  const user = await User.findByPk(id);
+  if(!user) return res.sendStatus(404);
+
+  await user.setProfilePhotos(req.body)
+  const images = await user.getProfilePhotos();
+
+  return res.status(200).json(images);
+});
 
 module.exports = {
   getAll,
@@ -91,5 +115,6 @@ module.exports = {
   remove,
   update,
   login,
-  logged
+  logged,
+  setImage
 }
