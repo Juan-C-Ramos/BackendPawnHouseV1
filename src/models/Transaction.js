@@ -15,7 +15,7 @@ const Transaction = sequelize.define('transaction', {
 
     interestsType: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         validate: {
             isIn: [['amortizado', 'abonoCapital', 'otros']]
           }
@@ -73,7 +73,6 @@ const Transaction = sequelize.define('transaction', {
 
 
     //contractId
-    //inventoryBillId
     //inventoriesId
     //customersId
     //usersId

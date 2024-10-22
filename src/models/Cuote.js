@@ -10,11 +10,11 @@ const Cuote = sequelize.define('cuote', {
         type: DataTypes.FLOAT,
         allowNull: false
     },
-    amountInterest: {
+    capitalAmount: {
         type: DataTypes.FLOAT,
         allowNull: false
     },
-    capitalAmount: {
+    amountInterest: {
         type: DataTypes.FLOAT,
         allowNull: false
     },

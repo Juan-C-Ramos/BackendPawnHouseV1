@@ -42,10 +42,14 @@ const create = catchError(async(req, res) => {
 
 const getOne = catchError(async (req, res) => {
     const { id } = req.params;
-    const result = await Transaction.findByPk(id, {include: [Payment, Contract, InventoryBill, 
+    const result = await Transaction.findByPk(id, {include: [Payment, Contract ,
         {
             model: Inventory,
             include: [Category, Branch]
+        },
+        {
+            model: Cuote,
+            as: "transactionCuotes"
         }
 
     ]});
@@ -96,6 +100,15 @@ const setInventoryBill = catchError(async(req, res) => {
     return res.status(200).json(images);
 });
 
+const setCuote = catchError(async(req, res) => {
+    const { id } = req.params;
+    const transaction = await Transaction.findByPk(id);
+    if(!transaction) return res.sendStatus(404);
+    await transaction.setTransactionCuotes(req.body)
+    const cuotes = await transaction.getTransactionCuotes();
+    return res.status(200).json(cuotes);
+})
+
 
 
 module.exports = {
@@ -105,5 +118,6 @@ module.exports = {
     remove,
     update, 
     setContract,
-    setInventoryBill
+    setInventoryBill,
+    setCuote
 }

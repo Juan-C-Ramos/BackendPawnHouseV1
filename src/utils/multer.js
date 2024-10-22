@@ -59,12 +59,12 @@ const upload_IdPhoto = multer({
 })
 
 const upload_InventoryPhoto = multer({
-   dest: path.join(__dirname, '..', 'public', 'idPhoto'),
+   dest: path.join(__dirname, '..', 'public', 'inventoryPhoto'),
    storage:multer.diskStorage({
     filename: (req, file, cb) => {
         cb(null, file.originalname);
     },
-    destination: path.join(__dirname, '..', 'public', 'idPhoto'),
+    destination: path.join(__dirname, '..', 'public', 'inventoryPhoto'),
    }) 
 })
 

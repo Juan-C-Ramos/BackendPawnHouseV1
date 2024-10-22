@@ -16,7 +16,7 @@ const create = catchError(async(req, res) => {
     const inventoryDB = await ImageInventory.findOne({where: {filename}})
 
     if (inventoryDB) return res.sendStatus(404).json("Ya Existe el archivo almacenado")
-    const url = `${req.protocol}://${req.headers.host}/public/uploads/${filename}`
+    const url = `${req.protocol}://${req.headers.host}/public/inventoryPhoto/${filename}`
     
     
     const result = await ImageInventory.create({filename, url});
@@ -30,7 +30,7 @@ const remove = catchError(async(req, res) => {
     const result = await ImageInventory.findByPk(id);
     if(!result) return res.sendStatus(404);
 
-    const imagePath = path.join(__dirname, '..', 'public','uploads', result.filename);
+    const imagePath = path.join(__dirname, '..', 'public','inventoryPhoto', result.filename);
     //console.log(imagePath);
     //console.log(result.filename);
     fs.unlinkSync(imagePath)

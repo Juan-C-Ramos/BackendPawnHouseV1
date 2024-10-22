@@ -15,7 +15,8 @@ const create = catchError(async(req, res) => {
 
     const inventoryBillDB = await InventoryBill.findOne({where: {filename}})
 
-    if (inventoryBillDB) return res.sendStatus(404)
+    if (inventoryBillDB) return res.status(404).json({ message: 'Ya existe un archivo con ese nombre.' });
+    
     const url = `${req.protocol}://${req.headers.host}/public/inventoryBill/${filename}`
     
     

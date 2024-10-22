@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update, setContract, setInventoryBill, setProofOfService } = require('../controllers/transaction.controller.js');
+const { getAll, create, getOne, remove, update, setContract, setInventoryBill, setProofOfService, setCuote } = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
 
@@ -11,6 +11,9 @@ routerTransaction.route('/')
     
 routerTransaction.route('/:id/contracts')
     .post(setContract);
+
+routerTransaction.route('/:id/cuotes')
+    .post(setCuote);
 
     
 routerTransaction.route('/:id/inventoryBills')

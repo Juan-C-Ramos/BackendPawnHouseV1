@@ -7,24 +7,41 @@ const Role = require('../models/Role.js');
 const Transaction = require('../models/Transaction.js');
 const Inventory = require('../models/Inventory.js');
 const Branch = require('../models/Branch.js');
+const Payment = require('../models/Payment.js');
+const Cuote = require('../models/Cuote.js');
 
 //const getAll = catchError(async(req, res) => {
   //  const results = await Customer.findAll({include: [IDPhoto, ProofOfServices, User]});
 //    return res.json(results);
 //});
 
+//as: "transactionCuotes"
 
 const getAll = catchError(async (req, res) => {
     const results = await Customer.findAll({
         include: [
             IDPhoto,
             ProofOfServices,
+            
+            {
+                model: Transaction,
+                include: [Payment,
+                    {
+                        model: Cuote,
+                        as: "transactionCuotes"
+                    },
+                    {
+                        model: User,
+                        include: [Role], // Incluye el modelo Role
+                        attributes: { exclude: ['password'] } // Excluye el campo password
+                    }
+                ]
+            },
             {
                 model: User,
                 include: [Role], // Incluye el modelo Role
                 attributes: { exclude: ['password'] } // Excluye el campo password
             }
-
         ]
     })
     return res.json(results);});

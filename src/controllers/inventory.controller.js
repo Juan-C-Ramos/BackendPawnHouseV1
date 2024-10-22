@@ -5,9 +5,6 @@ const ImageInventory = require('../models/ImageInventory.js');
 const Branch = require('../models/Branch.js');
 const Transaction = require('../models/Transaction.js');
 const Customer = require('../models/Customer.js');
-const User = require('../models/User.js');
-const Role = require('../models/Role.js');
-const InventoryBill = require('../models/InventoryBill.js');
 
 const getAll = catchError(async(req, res) => {
     const results = await Inventory.findAll({include: [Category, ImageInventory, Branch,
@@ -52,23 +49,28 @@ const update = catchError(async(req, res) => {
 
 const setImage = catchError(async(req, res) => {
     const { id } = req.params;
-    const inventory = await Inventory.findByPk(id);
+    const inventory = await Inventory.findOne({where: {id}});
     if(!inventory) return res.sendStatus(404);
 
-    await inventory.setImageInventories(req.body)
-    const images = await inventory.getImageInventories();
+    await inventory.setImageInventory(req.body)
+   //const images = await inventory.getImageInventory();
 
-    return res.status(200).json(images);
+    return res.status(200).json();
 });
 const setBillImage = catchError(async(req, res) => {
     const { id } = req.params;
-    const inventory = await Inventory.findByPk(id);
+    console.log("error 1")
+    const inventory = await Inventory.findOne({where: {id}});
+    console.log("error 2")
     if(!inventory) return res.sendStatus(404);
-
+    console.log("error 3")
+    
     await inventory.setInventoryBill(req.body)
-    const images = await inventory.getInventoryBill();
+    console.log("error 4")
+    //const images = await inventory.getInventoryBill();
+    console.log("error 5")
 
-    return res.status(200).json(images);
+    return res.status(200).json();
 });
 module.exports = {
     getAll,
