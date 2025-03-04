@@ -13,6 +13,7 @@ const ProofOfServices = require("./ProofOfServices.js")
 const InventoryBill = require("./InventoryBill.js")
 const IdPhoto = require("./IDPhoto.js")
 const Cuotes = require("./Cuote.js")
+const LoginRegister = require("./LoginRegister.js")
 
 //Users -> Customer);
 Customer.belongsTo(User)
@@ -79,6 +80,11 @@ Category.hasMany(Inventory)
 //Payments -> transactions
 Payment.belongsTo(Transaction) //transactionsId
 Transaction.hasMany(Payment) //transactionsIds
+
+/////////////////////////////////////////////////////////
+//loginRegister -> User
+LoginRegister.belongsTo(User) //transactionsId
+User.hasMany(LoginRegister) //transactionsIds
 
 /////////////////////////////////////////////
 //InventoryImages

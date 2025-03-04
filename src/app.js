@@ -7,14 +7,17 @@ require('dotenv').config();
 require('./models');
 const path = require('path');
 
+
 // Esta es nuestra aplicación
 const app = express();
+
 
 // Middlewares 
 app.use(express.json());
 app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
+//configuracion de CORS
 app.use(cors());
 
 app.use(express.static(path.join(__dirname,)));

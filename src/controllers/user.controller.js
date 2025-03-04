@@ -6,6 +6,8 @@ const ProfilePhoto = require('../models/ProfilPhoto.js');
 const Customer = require('../models/Customer.js');
 const Transaction = require('../models/Transaction.js');
 const Inventory = require('../models/Inventory.js');
+const LoginRegister = require('../models/LoginRegister');
+
 
 const getAll = catchError(async (req, res) => {
   const results = await User.findAll({include: [ProfilePhoto]});
@@ -13,6 +15,7 @@ const getAll = catchError(async (req, res) => {
 });
 
 const create = catchError(async (req, res) => {
+
 
   const { password } = req.body
   const hashedPassword = await bcrypt.hash(password, 10)
@@ -29,7 +32,7 @@ const create = catchError(async (req, res) => {
 
 const getOne = catchError(async (req, res) => {
   const { id } = req.params;
-  const result = await User.findByPk(id, {include: [ProfilePhoto, Customer, 
+  const result = await User.findByPk(id, {include: [ProfilePhoto, Customer, LoginRegister,
     {
         model: Transaction,
         as: 'transactions',
@@ -65,11 +68,15 @@ const update = catchError(async (req, res) => {
 
 const login = catchError(async (req, res) => { //! -> /users/login
 
+
+
     //const crypto = require('crypto');
     //const secretKey = crypto.randomBytes(64).toString('hex');
     //console.log(secretKey);
     
-  const { userName, password } = req.body
+  const { userName, password, dispositivo, locationLat, locationLong } = req.body
+
+  console.log(req.body)
 
   console.log(userName, password);
 
@@ -86,6 +93,19 @@ const login = catchError(async (req, res) => { //! -> /users/login
     process.env.TOKEN_SECRET,
     { expiresIn: '1d' }
   )
+
+  const loginRegister = {
+    dispositivo: dispositivo,
+    locationLat: locationLat,
+    locationLong: locationLong,
+    browser: req.headers['user-agent'],
+    idUser: user.id,
+    ipAddress: req.ip,
+  }
+  const result = await LoginRegister.create(loginRegister);
+
+  await user.setLoginRegisters(result.id)
+
 
   return res.json({ user, token })
 

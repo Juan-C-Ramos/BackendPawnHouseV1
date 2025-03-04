@@ -2,10 +2,14 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../utils/connection');
 
 const Transaction = sequelize.define('transaction', {
+    contractNumber:{
+        type: DataTypes.STRING,
+        allowNull: true
+    },
 
     description: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     amonunt: {
@@ -15,9 +19,9 @@ const Transaction = sequelize.define('transaction', {
 
     interestsType: {
         type: DataTypes.STRING,
-        allowNull: true,
+        allowNull: false,
         validate: {
-            isIn: [['amortizado', 'abonoCapital', 'otros']]
+            isIn: [['amortizado', 'abonoCapital', 'otros', 'ventas']]
           }
     },
 
@@ -50,12 +54,12 @@ const Transaction = sequelize.define('transaction', {
 
     balance: { 
         type: DataTypes.FLOAT,
-        allowNull: false
+        allowNull: true
     },
 
     capital: {
         type: DataTypes.FLOAT,
-        allowNull: false
+        allowNull: true
     },
 
     status: {

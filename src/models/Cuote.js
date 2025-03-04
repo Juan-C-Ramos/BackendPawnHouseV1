@@ -14,6 +14,10 @@ const Cuote = sequelize.define('cuote', {
         type: DataTypes.FLOAT,
         allowNull: false
     },
+    totalPaid: {
+        type: DataTypes.FLOAT,
+        defaultValue: 0
+    },
     amountInterest: {
         type: DataTypes.FLOAT,
         allowNull: false
@@ -34,6 +38,9 @@ const Cuote = sequelize.define('cuote', {
     status: {
         type: DataTypes.STRING,
         allowNull: false,
+        validate: {
+            isIn: [['paid', 'notPaid', "deposit"]]
+          },
         defaultValue: 'notPaid'
     }
 });

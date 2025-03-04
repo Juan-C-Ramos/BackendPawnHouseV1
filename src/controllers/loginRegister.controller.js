@@ -1,33 +1,34 @@
 const catchError = require('../utils/catchError');
-const Role = require('../models/Role.js');
+const LoginRegister = require('../models/LoginRegister');
+const { where } = require('sequelize');
 
 const getAll = catchError(async(req, res) => {
-    const results = await Role.findAll();
+    const results = await LoginRegister.findAll();
     return res.json(results);
 });
 
-const create = catchError(async(req, res) => {
-    const result = await Role.bulkCreate(req.body);
+const createRegister = catchError(async(req, res) => {
+    const result = await LoginRegister.create(req.body);
     return res.status(201).json(result);
 });
 
 const getOne = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await Role.findByPk(id);
+    const result = await LoginRegister.findAll({where: { id: idUser}});
     if(!result) return res.sendStatus(404);
     return res.json(result);
 });
 
 const remove = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await Role.destroy({ where: {id} });
+    const result = await LoginRegister.destroy({ where: {id} });
     if(!result) return res.sendStatus(404);
     return res.sendStatus(204);
 });
 
 const update = catchError(async(req, res) => {
     const { id } = req.params;
-    const result = await Role.update(
+    const result = await LoginRegister.update(
         req.body,
         { where: {id}, returning: true }
     );
@@ -37,8 +38,8 @@ const update = catchError(async(req, res) => {
 
 module.exports = {
     getAll,
-    create,
+    createRegister,
     getOne,
     remove,
     update
-}
+}                   

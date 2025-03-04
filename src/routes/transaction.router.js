@@ -1,28 +1,46 @@
-const { getAll, create, getOne, remove, update, setContract, setInventoryBill, setProofOfService, setCuote } = require('../controllers/transaction.controller.js');
+const { 
+    getAll, 
+    create, 
+    getOne, 
+    remove, 
+    update, 
+    setContract, 
+    setInventoryBill, 
+    setProofOfService, 
+    setCuote, 
+    getPrestamosTransactions, 
+    getVentasTransactions, 
+    getEmpeñoTransactions 
+} = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
-
 const routerTransaction = express.Router();
 
 routerTransaction.route('/')
-    .get( getAll)
-    .post( create);
+    .get(getAll)
+    .post(create);
 
-    
 routerTransaction.route('/:id/contracts')
     .post(setContract);
 
 routerTransaction.route('/:id/cuotes')
     .post(setCuote);
 
-    
 routerTransaction.route('/:id/inventoryBills')
     .post(setInventoryBill);
 
+routerTransaction.route('/prestamos')
+    .get(getPrestamosTransactions);
 
-routerTransaction.route('/:id') 
-    .get( getOne)
-    .delete( remove)
-    .put( update);
+routerTransaction.route('/venta')
+    .get(getVentasTransactions);
+
+routerTransaction.route('/empeno')
+    .get(getEmpeñoTransactions);
+
+routerTransaction.route('/:id')
+    .get(getOne)
+    .delete(remove)
+    .put(update);
 
 module.exports = routerTransaction;

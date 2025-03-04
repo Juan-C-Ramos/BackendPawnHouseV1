@@ -6,6 +6,10 @@ const Branch = require('../models/Branch.js');
 const Transaction = require('../models/Transaction.js');
 const Customer = require('../models/Customer.js');
 
+
+
+
+
 const getAll = catchError(async(req, res) => {
     const results = await Inventory.findAll({include: [Category, ImageInventory, Branch,
         {
@@ -72,6 +76,29 @@ const setBillImage = catchError(async(req, res) => {
 
     return res.status(200).json();
 });
+
+//busquedas mas especificas 
+
+//busqueda por isOnSale
+
+const getOnSaleItems = catchError(async (req, res) => {
+    const results = await Inventory.findAll({
+        where: {
+            isOnSale: true
+        },
+        include: [
+            Category,
+            ImageInventory,
+            Branch,
+            {
+                model: Transaction,
+                include: [Customer]
+            }
+        ]
+    });
+    return res.json(results);
+});
+
 module.exports = {
     getAll,
     create,
@@ -79,5 +106,6 @@ module.exports = {
     remove,
     update,
     setImage,
-    setBillImage
+    setBillImage,
+    getOnSaleItems
 }

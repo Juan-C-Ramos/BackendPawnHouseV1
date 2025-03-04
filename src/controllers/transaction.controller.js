@@ -32,20 +32,56 @@ const getAll = catchError(async(req, res) => {
             as: "transactionCuotes"
         }
     ]});
+
     return res.json(results);
 });
 
 const create = catchError(async(req, res) => {
     const result = await Transaction.create(req.body);
-    return res.status(201).json(result);
+
+    const id = result.id;
+    const resultComplete = await Transaction.findByPk(id, {include: [Contract, Customer, 
+        {
+            model: User,
+            include: [Role], // Incluye el modelo Role
+            attributes: { exclude: ['password'] } // Excluye el campo password
+        },
+        {
+            model: Inventory,
+            include: [Category, Branch]
+        },
+        {
+            model: Payment,
+            include: [Cuote]
+        },
+        {
+            model: Cuote,
+            as: "transactionCuotes"
+        }
+
+    ]});
+
+    return res.json(resultComplete);
+
+
+    //return res.status(201).json(result);
 });
 
 const getOne = catchError(async (req, res) => {
     const { id } = req.params;
-    const result = await Transaction.findByPk(id, {include: [Payment, Contract ,
+    const result = await Transaction.findByPk(id, {include: [Contract, Customer, 
+        {
+            model: User,
+            include: [Role], // Incluye el modelo Role
+            attributes: { exclude: ['password'] } // Excluye el campo password
+        },
         {
             model: Inventory,
             include: [Category, Branch]
+        },
+        {
+            model: Payment,
+            include: [Cuote]
         },
         {
             model: Cuote,
@@ -100,15 +136,136 @@ const setInventoryBill = catchError(async(req, res) => {
     return res.status(200).json(images);
 });
 
+// const setCuote = catchError(async(req, res) => {
+//     const { id } = req.params;
+//     const transaction = await Transaction.findByPk(id);
+//     if(!transaction) return res.sendStatus(404);
+//     await transaction.setTransactionCuotes(req.body)
+//     const cuotes = await transaction.getTransactionCuotes();
+//     return res.status(200).json(cuotes);
+// })
+
+
 const setCuote = catchError(async(req, res) => {
     const { id } = req.params;
     const transaction = await Transaction.findByPk(id);
-    if(!transaction) return res.sendStatus(404);
-    await transaction.setTransactionCuotes(req.body)
+    if (!transaction) return res.sendStatus(404);
+
+    const existingCuotes = await transaction.getTransactionCuotes();
+    const newCuotes = req.body;
+
+    // Añadir las nuevas cuotas a las existentes usando push
+    existingCuotes.push(...newCuotes);
+
+    await transaction.setTransactionCuotes(existingCuotes);
     const cuotes = await transaction.getTransactionCuotes();
     return res.status(200).json(cuotes);
-})
+});
 
+const getPrestamosTransactions = async (req, res) => {
+    try {
+        const prestamosTransactions = await Transaction.findAll({
+            where: {
+                transactionType: 'prestamos'
+            },
+            include: [
+                Contract, 
+                Customer, 
+                {
+                    model: User,
+                    include: [Role], 
+                    attributes: { exclude: ['password'] }
+                },
+                {
+                    model: Inventory,
+                    include: [Category, Branch]
+                },
+                {
+                    model: Payment,
+                    include: [Cuote]
+                },
+                {
+                    model: Cuote,
+                    as: "transactionCuotes"
+                }
+            ]
+        });
+        return res.status(200).json(prestamosTransactions);
+    } catch (error) {
+        console.error('Error al obtener transacciones de prestamos:', error);
+        return res.status(500).json({ message: 'Error al obtener transacciones de prestamos' });
+    }
+};
+
+const getVentasTransactions = async (req, res) => {
+    try {
+        const ventasTransactions = await Transaction.findAll({
+            where: {
+                transactionType: 'venta'
+            },
+            include: [
+                Contract, 
+                Customer, 
+                {
+                    model: User,
+                    include: [Role], 
+                    attributes: { exclude: ['password'] }
+                },
+                {
+                    model: Inventory,
+                    include: [Category, Branch]
+                },
+                {
+                    model: Payment,
+                    include: [Cuote]
+                },
+                {
+                    model: Cuote,
+                    as: "transactionCuotes"
+                }
+            ]
+        });
+        return res.status(200).json(ventasTransactions);
+    } catch (error) {
+        console.error('Error al obtener transacciones de venta:', error);
+        return res.status(500).json({ message: 'Error al obtener transacciones de venta' });
+    }
+};
+
+const getEmpeñoTransactions = async (req, res) => {
+    try {
+        const empeñoTransactions = await Transaction.findAll({
+            where: {
+                transactionType: 'empeño'
+            },
+            include: [
+                Contract, 
+                Customer, 
+                {
+                    model: User,
+                    include: [Role], 
+                    attributes: { exclude: ['password'] }
+                },
+                {
+                    model: Inventory,
+                    include: [Category, Branch]
+                },
+                {
+                    model: Payment,
+                    include: [Cuote]
+                },
+                {
+                    model: Cuote,
+                    as: "transactionCuotes"
+                }
+            ]
+        });
+        return res.status(200).json(empeñoTransactions);
+    } catch (error) {
+        console.error('Error al obtener transacciones de empeño:', error);
+        return res.status(500).json({ message: 'Error al obtener transacciones de empeño' });
+    }
+};
 
 
 module.exports = {
@@ -119,5 +276,8 @@ module.exports = {
     update, 
     setContract,
     setInventoryBill,
-    setCuote
+    setCuote,
+    getPrestamosTransactions,
+    getVentasTransactions,
+    getEmpeñoTransactions,
 }

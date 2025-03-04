@@ -16,6 +16,7 @@ const routerInventoryBill = require('./inventoryBill.router.js');
 const routerIDPhoto = require('./idPhoto.router.js');
 const routerCuote = require('./cuote.router.js');
 const { verifyJwt } = require('../utils/verifyJWT.js');
+const routerLoginRegister = require('./loginRegister.router.js');
 const router = express.Router();
 
 
@@ -28,9 +29,10 @@ router.use('/payments',verifyJwt, routerPayment),
 router.use('/transactions',verifyJwt, routerTransaction),
 router.use('/users', routerUser),
 router.use('/categories',verifyJwt, routerCategory),
-router.use('/roles',verifyJwt, routerRole),
+router.use('/roles', routerRole),
 router.use('/branches',verifyJwt, routerBranch),
 router.use('/coutes',verifyJwt, routerCuote)
+router.use('/loginRegisters',verifyJwt, routerLoginRegister)
 
 // Images
 router.use('/images/inventory', routerImageInventory),

@@ -6,6 +6,15 @@ const getAll = catchError(async(req, res) => {
     return res.json(results);
 });
 
+const getpaymentCount = catchError(async(req, res) => {
+    const results = await Payment.findAll();
+    let paymentCount = results.length;
+    paymentCount = paymentCount + 1
+    const formattedPaymentCount = paymentCount.toString().padStart(7, '0')
+    console.log(formattedPaymentCount)
+    return res.json(formattedPaymentCount);
+});
+
 const create = catchError(async(req, res) => {
     const result = await Payment.create(req.body);
     return res.status(201).json(result);
@@ -37,6 +46,7 @@ const update = catchError(async(req, res) => {
 
 module.exports = {
     getAll,
+    getpaymentCount,
     create,
     getOne,
     remove,
