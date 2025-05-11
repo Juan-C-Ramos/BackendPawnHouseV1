@@ -30,6 +30,11 @@ const Cuote = sequelize.define('cuote', {
         allowNull: false,
         defaultValue: 0
     },
+    itbms: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        defaultValue: 0
+    },
     idOfTransaction: {
         type: DataTypes.FLOAT,
         allowNull: false,

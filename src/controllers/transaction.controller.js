@@ -35,6 +35,12 @@ const getAll = catchError(async(req, res) => {
 
     return res.json(results);
 });
+const getIdContract = catchError(async(req, res) => {
+    const results = await Transaction.findAll();
+    const IdContract = results.length + 1
+
+    return res.json(IdContract);
+});
 
 const create = catchError(async(req, res) => {
     const result = await Transaction.create(req.body);
@@ -280,4 +286,5 @@ module.exports = {
     getPrestamosTransactions,
     getVentasTransactions,
     getEmpeñoTransactions,
+    getIdContract
 }

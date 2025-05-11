@@ -22,7 +22,22 @@ const Payment = sequelize.define('payment', {
     paymentDate:{
         type: DataTypes.DATEONLY,
         allowNull: false
-    }
+    }, 
+    isRegistered:{
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    itbms:{
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        defaultValue: 0
+    },
+    paymentMethod:{
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
     
 
     //paymentBill

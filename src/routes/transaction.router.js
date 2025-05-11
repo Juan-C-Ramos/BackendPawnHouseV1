@@ -10,7 +10,8 @@ const {
     setCuote, 
     getPrestamosTransactions, 
     getVentasTransactions, 
-    getEmpeñoTransactions 
+    getEmpeñoTransactions ,
+    getIdContract
 } = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
@@ -29,6 +30,8 @@ routerTransaction.route('/:id/cuotes')
 routerTransaction.route('/:id/inventoryBills')
     .post(setInventoryBill);
 
+routerTransaction.route('/numeroContrato')
+    .get(getIdContract);
 routerTransaction.route('/prestamos')
     .get(getPrestamosTransactions);
 

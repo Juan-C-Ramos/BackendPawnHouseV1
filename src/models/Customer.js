@@ -15,7 +15,6 @@ const Customer = sequelize.define('customer', {
     email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true
     },
 
     phone: {
@@ -72,12 +71,12 @@ const Customer = sequelize.define('customer', {
 
     firstReference: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     secondReference: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     notes: {

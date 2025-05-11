@@ -29,7 +29,18 @@ const Transaction = sequelize.define('transaction', {
         type: DataTypes.FLOAT,
         allowNull: true
     },
-
+    interestAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+    },
+    morosidadAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true
+    },
+    nextPaymentDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true
+    },
 
     startDate: {
         type: DataTypes.DATEONLY,
@@ -38,7 +49,7 @@ const Transaction = sequelize.define('transaction', {
 
     endDate: {
         type: DataTypes.DATEONLY,
-        allowNull: false  
+        allowNull: true  
     },
     
     cuotes: {
@@ -73,6 +84,11 @@ const Transaction = sequelize.define('transaction', {
         validate: {
             isIn: [['prestamos', 'venta', 'empeño']]
           }
+    },
+    isRegistered: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
     }
 
 

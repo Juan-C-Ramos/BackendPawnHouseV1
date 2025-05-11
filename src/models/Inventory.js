@@ -75,6 +75,11 @@ const Inventory = sequelize.define('inventory', {
             isIn: [['Vendido', 'En Inventario', "Reclamado"]]
           },
         defaultValue: 'En Inventario'
+    },
+    isRegistered: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
     }
     //categoriesId for the relation in the index.js file
     //inventoryBillId for the relation in the index.js file
