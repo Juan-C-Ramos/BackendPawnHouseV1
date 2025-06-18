@@ -66,19 +66,12 @@ const create = catchError(async (req, res) => {
 });
 
 const bulkCreate = catchError(async (req, res) => {
-  const customers = req.body;
 
-  if (!Array.isArray(customers) || customers.length === 0) {
-    return res.status(400).json({ message: 'La lista de clientes es inválida o está vacía.' });
-  }
 
   // Insertar en bloque
-  const createdCustomers = await Customer.bulkCreate(customers, {
-    validate: true, // Valida cada objeto según el modelo
-    individualHooks: true // Ejecuta hooks como `beforeCreate` en cada instancia (si los usas)
-  });
+  const createdCustomers = await Customer.bulkCreate(req.body);
 
-  return res.status(201);
+  return res.status(201).json(createdCustomers);
 });
 
 
