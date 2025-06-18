@@ -25,7 +25,7 @@ const Customer = sequelize.define('customer', {
 
     typeID: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     
     numberID: {
@@ -36,37 +36,37 @@ const Customer = sequelize.define('customer', {
 
     nacionality: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     addressProvincia: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     
     addressDistrito: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     addressCorregimiento: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     addressBarrio: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     
     addressCalle: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     addressCasa: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
 
     firstReference: {
@@ -81,11 +81,11 @@ const Customer = sequelize.define('customer', {
 
     notes: {
         type: DataTypes.TEXT,
-        allowNull: false
+        allowNull: true
     },
     status: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         defaultValue: 'active'
     }
     

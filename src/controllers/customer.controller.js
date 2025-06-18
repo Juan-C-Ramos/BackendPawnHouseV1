@@ -65,6 +65,23 @@ const create = catchError(async (req, res) => {
     return res.status(201).json(customerWithAssociations);
 });
 
+const bulkCreate = catchError(async (req, res) => {
+  const customers = req.body;
+
+  if (!Array.isArray(customers) || customers.length === 0) {
+    return res.status(400).json({ message: 'La lista de clientes es inválida o está vacía.' });
+  }
+
+  // Insertar en bloque
+  const createdCustomers = await Customer.bulkCreate(customers, {
+    validate: true, // Valida cada objeto según el modelo
+    individualHooks: true // Ejecuta hooks como `beforeCreate` en cada instancia (si los usas)
+  });
+
+  return res.status(201);
+});
+
+
 const getOne = catchError(async(req, res) => {
     const { id } = req.params;
     const customerWithAssociations = await Customer.findByPk(id, {
@@ -140,5 +157,6 @@ module.exports = {
     update,
     setProofOfService,
     setIdPhoto,
-    setUser
+    setUser,
+    bulkCreate
 }

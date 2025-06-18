@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update, setProofOfService, setIdPhoto, setUser} = require('../controllers/customer.controller.js');
+const { getAll, create, getOne, remove, update, setProofOfService, setIdPhoto, setUser, bulkCreate} = require('../controllers/customer.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
 
@@ -6,7 +6,10 @@ const routerCustomer = express.Router();
 
 routerCustomer.route('/')
     .get( getAll)
-    .post( create);
+    .post( create)
+
+routerCustomer.route('/bulk')
+    .post(bulkCreate);
 
 routerCustomer.route('/:id/proofOfService')
     .post(setProofOfService);
