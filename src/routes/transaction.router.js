@@ -21,6 +21,9 @@ routerTransaction.route('/')
     .get(getAll)
     .post(create);
 
+routerTransaction.route('/bulk')
+    .post(createManyContracts);
+
 routerTransaction.route('/:id/contracts')
     .post(setContract);
 
