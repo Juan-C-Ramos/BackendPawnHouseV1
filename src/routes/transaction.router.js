@@ -22,26 +22,27 @@ routerTransaction.route('/')
     .get(getAll)
     .post(create);
 
-routerTransaction.route('/bulk')
-    .post(createManyContracts);
-
-routerTransaction.route('/:id/contracts')
+    
+    routerTransaction.route('/:id/contracts')
     .post(setContract);
-
-routerTransaction.route('/:id/cuotes')
+    
+    routerTransaction.route('/:id/cuotes')
     .post(setCuote);
-
-routerTransaction.route('/:id/inventoryBills')
+    
+    routerTransaction.route('/:id/inventoryBills')
     .post(setInventoryBill);
-
-routerTransaction.route('/numeroContrato')
+    
+    routerTransaction.route('/numeroContrato')
     .get(getIdContract);
-routerTransaction.route('/prestamos')
+    routerTransaction.route('/prestamos')
     .get(getPrestamosTransactions);
-
-routerTransaction.route('/venta')
+    
+    routerTransaction.route('/venta')
     .get(getVentasTransactions);
-
+    
+    routerTransaction.route('/bulk')
+        .post(createManyContracts);
+    
 routerTransaction.route('/empeno')
     .get(getEmpeñoTransactions);
 
