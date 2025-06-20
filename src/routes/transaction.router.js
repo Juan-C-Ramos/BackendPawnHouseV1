@@ -11,7 +11,8 @@ const {
     getPrestamosTransactions, 
     getVentasTransactions, 
     getEmpeñoTransactions ,
-    getIdContract
+    getIdContract,
+    createManyContracts
 } = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
