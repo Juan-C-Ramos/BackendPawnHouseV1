@@ -56,7 +56,7 @@ const Transaction = sequelize.define('transaction', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-
+ 
     cuotesAmount: {
         type: DataTypes.FLOAT,
         allowNull: true,
