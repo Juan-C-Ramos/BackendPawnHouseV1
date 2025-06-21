@@ -40,14 +40,9 @@ routerTransaction.route('/')
     routerTransaction.route('/venta')
     .get(getVentasTransactions);
 
-    // routerTransaction.route('/bulk')
+    routerTransaction.route('/bulk')
     
-    //     .post(createManyContracts);
-
-    routerTransaction.route('/bulk').post((req, res) => {
-  console.log("✅ Se recibió la petición bulk");
-  res.send("OK");
-});
+        .post(createManyContracts);
     
 routerTransaction.route('/empeno')
     .get(getEmpeñoTransactions);
