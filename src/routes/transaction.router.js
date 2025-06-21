@@ -41,8 +41,7 @@ routerTransaction.route('/')
     .get(getVentasTransactions);
 
     routerTransaction.route('/bulk')
-    
-        .post(createManyContracts);
+    .post(createManyContracts);
     
 routerTransaction.route('/empeno')
     .get(getEmpeñoTransactions);
