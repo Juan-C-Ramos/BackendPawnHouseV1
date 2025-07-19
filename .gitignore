@@ -3,3 +3,4 @@ node_modules
 bin
 uploads
 public
+src/utils/*.json
