@@ -1,21 +1,20 @@
-const { getAll, create, remove } = require('../controllers/contract.controller');
+// routes/contract.router.js
 const express = require('express');
-const { upload_Contract } = require('../utils/multer');
+const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 
-const routerContract = express.Router();
+const contractController = require('../controllers/contract.controller');
 
-routerContract.route('/')
-    .get(getAll)
-    .post(upload_Contract.single('image'), create);
-    
-    
+// Configura Multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'), // carpeta temporal
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname),
+});
+const upload = multer({ storage });
 
+router.post('/', contractController.create);
+router.get('/', contractController.getAll);
+router.delete('/:id', contractController.remove);
 
-
-routerContract.route('/:id')
-    //.get(getOne)
-    .delete(remove)
-    //.put(update);
-    
-
-module.exports = routerContract;
+module.exports = router;

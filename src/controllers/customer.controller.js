@@ -10,6 +10,50 @@ const Branch = require('../models/Branch.js');
 const Payment = require('../models/Payment.js');
 const Cuote = require('../models/Cuote.js');
 
+const { Op } = require("sequelize");
+
+const getFiltered = catchError(async (req, res) => {
+  const { name, cedula, userId } = req.query;
+
+  const where = {};
+
+  if (name) {
+    where[Op.or] = [
+      { firstName: { [Op.iLike]: `%${name}%` } },
+      { lastName: { [Op.iLike]: `%${name}%` } }
+    ];
+  }
+
+  if (cedula) {
+    where.numberID = { [Op.iLike]: `%${cedula}%` };
+  }
+
+  if (userId) {
+    where.userId = userId;
+  }
+
+  const results = await Customer.findAll({
+    where,
+    include: [
+      {
+        model: User,
+        include: [Role],
+        attributes: { exclude: ['password'] }
+      },
+      {
+        model: Transaction,
+        include: [Payment, {
+          model: Cuote,
+          as: "transactionCuotes"
+        }]
+      }
+    ]
+  });
+
+  res.json(results);
+});
+
+
 //const getAll = catchError(async(req, res) => {
   //  const results = await Customer.findAll({include: [IDPhoto, ProofOfServices, User]});
 //    return res.json(results);
@@ -151,5 +195,6 @@ module.exports = {
     setProofOfService,
     setIdPhoto,
     setUser,
-    bulkCreate
+    bulkCreate,
+    getFiltered
 }

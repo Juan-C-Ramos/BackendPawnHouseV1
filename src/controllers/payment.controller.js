@@ -1,10 +1,25 @@
 const catchError = require('../utils/catchError');
 const Payment = require('../models/Payment.js');
+const Transaction = require('../models/Transaction.js')
+const Customer = require('../models/Customer.js');
+// Define associations
 
-const getAll = catchError(async(req, res) => {
-    const results = await Payment.findAll();
-    return res.json(results);
+const getAll = catchError(async (req, res) => {
+  const results = await Payment.findAll({
+    include: [
+      {
+        model: Transaction,
+        include: [
+          {
+            model: Customer,
+          },
+        ],
+      },
+    ],
+  });
+  return res.json(results);
 });
+
 
 const getpaymentCount = catchError(async(req, res) => {
     const results = await Payment.findAll();

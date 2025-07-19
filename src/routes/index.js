@@ -37,7 +37,7 @@ router.use('/loginRegisters',verifyJwt, routerLoginRegister)
 // Images
 router.use('/images/inventory', routerImageInventory),
 router.use('/images/profilePhoto', routerProfilePhoto),
-router.use('/images/contract', routerContract),
+router.use('/contracts', routerContract),
 router.use('/images/proofOfService', routerProofOfService),
 router.use('/images/inventoryBill', routerInventoryBill),
 router.use('/images/idPhoto', routerIDPhoto),

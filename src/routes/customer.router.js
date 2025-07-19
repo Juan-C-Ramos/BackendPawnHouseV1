@@ -4,9 +4,14 @@ const { verifyJwt } = require('../utils/verifyJWT');
 
 const routerCustomer = express.Router();
 
+const { getFiltered } = require("../controllers/customer.controller");
+
+routerCustomer.get("/filter", getFiltered);
+
+
 routerCustomer.route('/')
     .get( getAll)
-    .post( create)
+    .post( create);
 
 routerCustomer.route('/bulk')
     .post(bulkCreate);

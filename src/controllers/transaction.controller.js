@@ -294,51 +294,49 @@ const createManyContracts = catchError(async (req, res) => {
       .json({ message: "Se requiere un array con contratos" });
   }
 
-  // 🧠 2. Extraer todas las cédulas del array original
-  const cedulas = data.map((d) => d.cedula);
+  // 🧠 2. Extraer y normalizar todas las cédulas
+  const cedulas = data.map((d) => String(d.cedula).trim());
 
-  // 🚀 3. Buscar todos los clientes con esas cédulas en una sola consulta (más rápido)
+  // 🚀 3. Buscar los clientes existentes en una sola consulta
   const customers = await Customer.findAll({
     where: { numberID: cedulas },
   });
 
-  // 🔁 4. Crear un mapa de { cedula: customerId } para consulta rápida
+  // 🔁 4. Crear mapa { cedula => customerId }
   const customerMap = {};
   customers.forEach((c) => {
-    customerMap[c.numberID] = c.id;
+    customerMap[String(c.numberID).trim()] = c.id;
   });
 
-  // 🧱 5. Armar nuevo array con customerId y los demás campos necesarios
+  // 🧱 5. Procesar contratos válidos
   const transformedContracts = [];
+  const cedulasOmitidas = [];
 
   for (const contract of data) {
-    const customerId = customerMap[contract.cedula];
+    const cedula = String(contract.cedula).trim();
+    const customerId = customerMap[cedula];
 
-    // ❌ Si no se encuentra el cliente por cédula, se devuelve error
     if (!customerId) {
-      return res.status(404).json({
-        message: `No se encontró un cliente con la cédula: ${contract.cedula}`,
-      });
+      cedulasOmitidas.push(cedula);
+      console.log(`Cédula no registrada: ${cedula}`);
+      continue; // Ignora este contrato
     }
 
-    // ✅ Desestructurar los demás campos del contrato
     const {
       contractNumber,
       interestsPorcent,
-      amonunt,
+      amonunt, // Revisa si este nombre es correcto en tu modelo
       morosidadAmount,
       cuotesAmount,
       balance,
       capital,
-      transctionType,
+      transactionType,
       interestsType,
     } = contract;
 
-    // 🗓️ Asignar fechas fijas porque no vienen en los datos originales
     const startDate = "2025-05-31";
     const nextPaymentDate = "2025-06-15";
 
-    // ➕ Construir el nuevo objeto con customerId en lugar de cedula
     transformedContracts.push({
       customerId,
       contractNumber,
@@ -348,21 +346,30 @@ const createManyContracts = catchError(async (req, res) => {
       cuotesAmount,
       balance,
       capital,
-      transctionType,
+      transactionType,
+      interestsType,
       startDate,
       nextPaymentDate,
-      interestsType,
     });
   }
 
-  // 💾 6. Crear todos los contratos en la base de datos con una sola operación
-  const created = await Contract.bulkCreate(transformedContracts, {
-    validate: true,
-  });
+  // 💾 6. Guardar contratos si hay válidos
+  let created = [];
+  if (transformedContracts.length > 0) {
+    created = await Transaction.bulkCreate(transformedContracts, {
+      validate: true,
+    });
+  }
 
-  // 📤 7. Responder con los contratos creados
-  return res.status(201).json(created);
+  // 📤 7. Responder con resumen
+  return res.status(201).json({
+    message: `Se crearon ${created.length} contratos. ${cedulasOmitidas.length > 0 ? `Se omitieron ${cedulasOmitidas.length} contratos por cédulas no registradas.` : ''}`,
+    omitidas: cedulasOmitidas,
+    contratos: created,
+  });
 });
+
+
 
 module.exports = {
   getAll,
