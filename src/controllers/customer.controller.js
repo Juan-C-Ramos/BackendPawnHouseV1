@@ -110,13 +110,37 @@ const create = catchError(async (req, res) => {
 });
 
 const bulkCreate = catchError(async (req, res) => {
+  const customers = req.body;
 
+  if (!Array.isArray(customers) || customers.length === 0) {
+    return res.status(400).json({ message: 'La lista de clientes es inválida o está vacía.' });
+  }
 
   // Insertar en bloque
-  const createdCustomers = await Customer.bulkCreate(req.body);
+  const createdCustomers = await Customer.bulkCreate(customers, {
+    validate: true, // Valida cada objeto según el modelo
+    individualHooks: true // Ejecuta hooks como `beforeCreate` en cada instancia (si los usas)
+  });
 
-  return res.status(201).json(createdCustomers);
+  // Volver a consultar con asociaciones (opcional, si realmente necesitas devolverlos con relaciones)
+  const fullCustomers = await Customer.findAll({
+    where: {
+      id: createdCustomers.map(c => c.id)
+    },
+    include: [
+      IDPhoto,
+      ProofOfServices,
+      {
+        model: User,
+        include: [Role],
+        attributes: { exclude: ['password'] }
+      }
+    ]
+  });
+
+  return res.status(201).json(fullCustomers);
 });
+
 
 
 const getOne = catchError(async(req, res) => {
