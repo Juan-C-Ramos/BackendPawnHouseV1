@@ -13,7 +13,7 @@ const Cuote = require('../models/Cuote.js');
 const { Op } = require("sequelize");
 
 const getFiltered = catchError(async (req, res) => {
-  const { name, cedula, userId } = req.query;
+  const { name, cedula, userId, phone } = req.query; // 👈 agregamos phone
 
   const where = {};
 
@@ -32,6 +32,10 @@ const getFiltered = catchError(async (req, res) => {
     where.userId = userId;
   }
 
+  if (phone) {
+    where.phone = { [Op.iLike]: `%${phone}%` }; // 👈 filtro por teléfono
+  }
+
   const results = await Customer.findAll({
     where,
     include: [
@@ -42,16 +46,20 @@ const getFiltered = catchError(async (req, res) => {
       },
       {
         model: Transaction,
-        include: [Payment, {
-          model: Cuote,
-          as: "transactionCuotes"
-        }]
+        include: [
+          Payment,
+          {
+            model: Cuote,
+            as: "transactionCuotes"
+          }
+        ]
       }
     ]
   });
 
   res.json(results);
 });
+
 
 
 //const getAll = catchError(async(req, res) => {
