@@ -4,6 +4,33 @@ const Transaction = require('../models/Transaction.js')
 const Customer = require('../models/Customer.js');
 // Define associations
 
+const { Op } = require("sequelize");
+
+const removeByMonth = catchError(async (req, res) => {
+  const { month } = req.params; // ejemplo: /payments/removeByMonth/6
+  const { year } = req.query;   // opcional: /payments/removeByMonth/6?year=2025
+
+  const targetYear = year || new Date().getFullYear();
+
+  // rango de fechas en base al campo paymentDate
+  const startDate = new Date(targetYear, month - 1, 1); // primer día del mes
+  const endDate = new Date(targetYear, month, 1);       // primer día del mes siguiente
+
+  const deletedCount = await Payment.destroy({
+    where: {
+      paymentDate: {
+        [Op.gte]: startDate,
+        [Op.lt]: endDate,
+      },
+    },
+  });
+
+  return res.json({
+    message: `Pagos eliminados en ${month}/${targetYear}: ${deletedCount}`,
+  });
+});
+
+
 const getAll = catchError(async (req, res) => {
   const results = await Payment.findAll({
     include: [
@@ -65,5 +92,6 @@ module.exports = {
     create,
     getOne,
     remove,
-    update
+    update,
+    removeByMonth
 }
