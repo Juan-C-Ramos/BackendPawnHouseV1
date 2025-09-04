@@ -13,7 +13,10 @@ const Role = require("../models/Role.js");
 const Cuote = require("../models/Cuote.js");
 
 const getAll = catchError(async (req, res) => {
-  const results = await Transaction.findAll({
+  const results = await Transaction.findAll(
+
+{
+{ order: [['id', 'ASC']},
     include: [
       Contract,
       Customer,
