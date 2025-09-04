@@ -16,7 +16,7 @@ const getAll = catchError(async (req, res) => {
   const results = await Transaction.findAll(
 
 {
-{ order: [['id', 'ASC']},
+order: [['id', 'ASC'],
     include: [
       Contract,
       Customer,
