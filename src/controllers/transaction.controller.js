@@ -80,6 +80,23 @@ const create = catchError(async (req, res) => {
   //return res.status(201).json(result);
 });
 
+// GET /transaction/customer/:customerId
+const getTransactionsByCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    const transactions = await Transaction.findAll({
+      where: { customerId: customerId, status: "inProgress" }, // solo activas
+      order: [["createdAt", "ASC"]], // opcional, de más antiguo a más reciente
+    });
+
+    res.status(200).json(transactions);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener transacciones del cliente" });
+  }
+};
+
 const getOne = catchError(async (req, res) => {
   const { id } = req.params;
   const result = await Transaction.findByPk(id, {
@@ -385,5 +402,6 @@ module.exports = {
   getVentasTransactions,
   getEmpeñoTransactions,
   getIdContract,
-  createManyContracts
+  createManyContracts,
+  getTransactionsByCustomer
 };

@@ -12,7 +12,8 @@ const {
     getVentasTransactions, 
     getEmpeñoTransactions ,
     getIdContract,
-    createManyContracts
+    createManyContracts,
+    getTransactionsByCustomer
 } = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
@@ -21,6 +22,9 @@ const routerTransaction = express.Router();
 routerTransaction.route('/')
     .get(getAll)
     .post(create);
+
+routerTransaction.route('/customer/:customerId')
+    .get(getTransactionsByCustomer);
 
     
     routerTransaction.route('/:id/contracts')
