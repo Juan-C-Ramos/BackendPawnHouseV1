@@ -23,7 +23,7 @@ const Inventory = sequelize.define('inventory', {
         type: DataTypes.STRING,
         allowNull: true,
         validate: {
-            isIn: [["Oro", "Plata"]]
+            isIn: [["Oro", "Plata",""]]
         }
     },
     register: {

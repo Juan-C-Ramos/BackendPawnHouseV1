@@ -5,7 +5,10 @@ const {
   getOne, 
   remove, 
   update,
-  removeByMonth // 👈 nuevo
+  removeByMonth, // 👈 existente
+  setAllRegistered, // 👈 nuevo
+  setRegisteredByIds, // 👈 nuevo
+  getPaymentsByUser // 👈 nuevo
 } = require('../controllers/payment.controller.js');
 
 const express = require('express');
@@ -16,16 +19,31 @@ const routerPayment = express.Router();
 routerPayment.route('/')
     .get(getAll) // 🔏🔐
     .post(create); // 🔏🔐
-
-routerPayment.route('/:id')
+    
+    
+    // 👉 Nueva ruta: actualizar TODOS los pagos a isRegistered = true
+    routerPayment.route('/setAllRegistered')
+    .put(setAllRegistered);
+    
+    // 👉 Nueva ruta: actualizar SOLO los pagos pasados por body (ids: [])
+    routerPayment.route('/setRegisteredByIds')
+    .put(setRegisteredByIds);
+    
+    routerPayment.route('/:id')
     .get(getOne) // 🔏🔐
     .delete(remove)  // 🔏🔐
     .put(update);  // 🔏🔐
-
-routerPayment.route('/factura/count')
+    
+    routerPayment.route('/factura/count')
     .get(getpaymentCount); // 🔏🔐
+    
+    // 👉 Nueva ruta para borrar todos los pagos de un mes/año según paymentDate
+    routerPayment.route('/removeByMonth/:month')
+        .delete(removeByMonth);
 
-// 👉 Nueva ruta para borrar todos los pagos de un mes/año según paymentDate
-routerPayment.delete('/removeByMonth/:month', removeByMonth);
+
+
+routerPayment.route('/user/:userId')
+.get(getPaymentsByUser);
 
 module.exports = routerPayment;

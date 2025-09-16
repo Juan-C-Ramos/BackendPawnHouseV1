@@ -5,13 +5,14 @@ const ImageInventory = require('../models/ImageInventory.js');
 const Branch = require('../models/Branch.js');
 const Transaction = require('../models/Transaction.js');
 const Customer = require('../models/Customer.js');
+const InventoryBill = require('../models/InventoryBill.js');
 
 
 
 
 
 const getAll = catchError(async(req, res) => {
-    const results = await Inventory.findAll({include: [Category, ImageInventory, Branch,
+    const results = await Inventory.findAll({include: [InventoryBill,Category, ImageInventory, Branch,
         {
             model: Transaction,
             include: [Customer]

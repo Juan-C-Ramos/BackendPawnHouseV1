@@ -40,6 +40,7 @@ const getAll = catchError(async (req, res) => {
 
   return res.json(results);
 });
+
 const getIdContract = catchError(async (req, res) => {
   const results = await Transaction.findAll();
   const IdContract = results.length + 1;
@@ -385,6 +386,24 @@ const createManyContracts = catchError(async (req, res) => {
     omitidas: cedulasOmitidas,
     contratos: created,
   });
+
+});
+
+const setPaidTransactions = catchError(async (req, res) => {
+  const [updatedCount] = await Transaction.update(
+    { status: 'paid' }, // valores a actualizar
+    { 
+      where: { 
+        morosidadAmount: 0,
+        capital: 0,
+        status: 'inProgress'
+      } 
+    }
+  );
+
+  return res.json({
+    message: `Se actualizaron ${updatedCount} transacciones a status = 'paid'`,
+  });
 });
 
 
@@ -403,5 +422,6 @@ module.exports = {
   getEmpeñoTransactions,
   getIdContract,
   createManyContracts,
-  getTransactionsByCustomer
+  getTransactionsByCustomer,
+  setPaidTransactions
 };

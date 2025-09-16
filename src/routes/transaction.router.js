@@ -13,7 +13,8 @@ const {
     getEmpeñoTransactions ,
     getIdContract,
     createManyContracts,
-    getTransactionsByCustomer
+    getTransactionsByCustomer,
+    setPaidTransactions
 } = require('../controllers/transaction.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
@@ -22,6 +23,10 @@ const routerTransaction = express.Router();
 routerTransaction.route('/')
     .get(getAll)
     .post(create);
+
+    // 👉 ruta específica
+routerTransaction.route('/setPaidTransactions')
+    .put(setPaidTransactions);
 
 routerTransaction.route('/customer/:customerId')
     .get(getTransactionsByCustomer);
