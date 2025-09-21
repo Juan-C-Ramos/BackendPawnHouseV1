@@ -17,6 +17,7 @@ const routerIDPhoto = require('./idPhoto.router.js');
 const routerCuote = require('./cuote.router.js');
 const { verifyJwt } = require('../utils/verifyJWT.js');
 const routerLoginRegister = require('./loginRegister.router.js');
+const routerRefinanciamientos = require('./refinanciamientos.router.js');
 const router = express.Router();
 
 
@@ -33,6 +34,7 @@ router.use('/roles', routerRole),
 router.use('/branches',verifyJwt, routerBranch),
 router.use('/coutes',verifyJwt, routerCuote)
 router.use('/loginRegisters',verifyJwt, routerLoginRegister)
+router.use('/refinanciamientos',verifyJwt, routerRefinanciamientos);
 
 // Images
 router.use('/images/inventory', routerImageInventory),
