@@ -1,194 +1,382 @@
-const catchError = require('../utils/catchError');
-const Payment = require('../models/Payment.js');
-const Transaction = require('../models/Transaction.js')
-const Customer = require('../models/Customer.js');
-const PaymentUsers = require('../models/PaymentsUsers.js');
-
-// Define associations
-
+// controllers/payment.controller.js
 const { Op } = require("sequelize");
+const Payment = require("../models/Payment.js");
+const PaymentUser = require("../models/PaymentsUsers.js");
+const catchError = require('../utils/catchError');
+const User = require("../models/User.js");
 
-const removeByMonth = catchError(async (req, res) => {
-  const { month } = req.params; // ejemplo: /payments/removeByMonth/6
-  const { year } = req.query;   // opcional: /payments/removeByMonth/6?year=2025
+
+/**
+ * Obtener todos los pagos
+ */
+const getAll = async (req, res) => {
+  try {
+    const payments = await Payment.findAll();
+    return res.json(payments);
+  } catch (error) {
+    console.error("Error en getAll:", error);
+    return res.status(500).json({ message: "Error al obtener los pagos" });
+  }
+};
+
+/**
+ * Contar cantidad de pagos (ejemplo: para facturación)
+ */
+const getpaymentCount = async (req, res) => {
+  try {
+    const count = await Payment.count();
+    return res.json({ count });
+  } catch (error) {
+    console.error("Error en getpaymentCount:", error);
+    return res.status(500).json({ message: "Error al contar los pagos" });
+  }
+};
+
+/**
+ * Crear un pago
+ */
+// Crear pago y registrar usuario que lo realizó
+const create = catchError(async (req, res) => {
+  const { userId, ...paymentData } = req.body;
+
+  // Validación básica
+  if (!userId) {
+    return res.status(400).json({ message: "Se requiere el userId" });
+  }
+
+  // Crear pago
+  const newPayment = await Payment.create(paymentData);
+
+  // Registrar en PaymentUser
+  await PaymentUser.create({
+    userId,
+    paymentId: newPayment.id,
+  });
+
+  return res.status(201).json(newPayment);
+});
+
+/**
+ * Obtener un pago por ID
+ */
+const getOne = async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id);
+    if (!payment) return res.status(404).json({ message: "Pago no encontrado" });
+    return res.json(payment);
+  } catch (error) {
+    console.error("Error en getOne:", error);
+    return res.status(500).json({ message: "Error al obtener el pago" });
+  }
+};
+
+/**
+ * Eliminar un pago por ID
+ */
+const remove = async (req, res) => {
+  try {
+    const deleted = await Payment.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ message: "Pago no encontrado" });
+    return res.json({ message: "Pago eliminado" });
+  } catch (error) {
+    console.error("Error en remove:", error);
+    return res.status(500).json({ message: "Error al eliminar el pago" });
+  }
+};
+
+/**
+ * Actualizar un pago por ID
+ */
+const update = async (req, res) => {
+  try {
+    const [updated] = await Payment.update(req.body, { where: { id: req.params.id } });
+    if (!updated) return res.status(404).json({ message: "Pago no encontrado" });
+    return res.json({ message: "Pago actualizado" });
+  } catch (error) {
+    console.error("Error en update:", error);
+    return res.status(500).json({ message: "Error al actualizar el pago" });
+  }
+};
+
+/**
+ * Eliminar todos los pagos de un mes/año según `paymentDate`
+ */
+const removeByMonth = async (req, res) => {
+  try {
+    const { month } = req.params;
+    const { year } = req.query; // opcional por query
+    if (!month || !year) {
+      return res.status(400).json({ message: "Mes y año son requeridos" });
+    }
+
+    const deleted = await Payment.destroy({
+      where: {
+        paymentDate: {
+          [Op.between]: [
+            new Date(`${year}-${month}-01`),
+            new Date(`${year}-${month}-31`)
+          ]
+        }
+      }
+    });
+
+    return res.json({ message: `Se eliminaron ${deleted} pagos del ${month}/${year}` });
+  } catch (error) {
+    console.error("Error en removeByMonth:", error);
+    return res.status(500).json({ message: "Error al eliminar pagos del mes" });
+  }
+};
+
+/**
+ * Marcar todos los pagos como registrados (`isRegistered = true`)
+ */
+const setAllRegistered = async (req, res) => {
+  try {
+    const [updated] = await Payment.update(
+      { isRegistered: true },
+      { where: {} }
+    );
+    return res.json({ message: `${updated} pagos marcados como registrados` });
+  } catch (error) {
+    console.error("Error en setAllRegistered:", error);
+    return res.status(500).json({ message: "Error al actualizar registros" });
+  }
+};
+
+/**
+ * Marcar solo pagos seleccionados como registrados
+ * Espera body: { ids: [1,2,3] }
+ */
+const setRegisteredByIds = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ message: "Debes enviar un array de IDs" });
+    }
+
+    const [updated] = await Payment.update(
+      { isRegistered: true },
+      { where: { id: ids } }
+    );
+
+    return res.json({ message: `${updated} pagos marcados como registrados` });
+  } catch (error) {
+    console.error("Error en setRegisteredByIds:", error);
+    return res.status(500).json({ message: "Error al actualizar registros" });
+  }
+};
+
+/**
+ * Obtener pagos por ID de usuario (relación manual con PaymentUser)
+ */
+const getPaymentsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Buscar registros de la tabla intermedia
+    const userPayments = await PaymentUser.findAll({
+      where: { userId },
+      attributes: ["paymentId"]
+    });
+
+    if (!userPayments.length) {
+      return res.json([]);
+    }
+
+    // Extraer solo los IDs de pagos
+    const paymentIds = userPayments.map(up => up.paymentId);
+
+    // Buscar pagos asociados
+    const payments = await Payment.findAll({
+      where: { id: paymentIds }
+    });
+
+    return res.json(payments);
+  } catch (error) {
+    console.error("Error en getPaymentsByUser:", error);
+    return res.status(500).json({ message: "Error al obtener pagos del usuario" });
+  }
+};
+
+const getPaymentsByUserAndMonth = catchError(async (req, res) => {
+  const { userId, month } = req.params;
+  const { year } = req.query;
 
   const targetYear = year || new Date().getFullYear();
 
-  // rango de fechas en base al campo paymentDate
-  const startDate = new Date(targetYear, month - 1, 1); // primer día del mes
-  const endDate = new Date(targetYear, month, 1);       // primer día del mes siguiente
+  // Rango de fechas basado en paymentDate
+  const startDate = new Date(targetYear, month - 1, 1);
+  const endDate = new Date(targetYear, month, 1);
 
-  const deletedCount = await Payment.destroy({
+  // 1️⃣ Buscar IDs de pagos para el usuario
+  const paymentUserRecords = await PaymentUsers.findAll({
+    where: { userId },
+    attributes: ['paymentId']
+  });
+
+  const paymentIds = paymentUserRecords.map(pu => pu.paymentId);
+
+  if (paymentIds.length === 0) {
+    return res.json([]); // no tiene pagos ese usuario
+  }
+
+  // 2️⃣ Buscar los pagos que coinciden con ese rango
+  const payments = await Payment.findAll({
     where: {
+      id: paymentIds,
       paymentDate: {
         [Op.gte]: startDate,
-        [Op.lt]: endDate,
-      },
+        [Op.lt]: endDate
+      }
     },
-  });
-
-  return res.json({
-    message: `Pagos eliminados en ${month}/${targetYear}: ${deletedCount}`,
-  });
-});
-
-
-const getAll = catchError(async (req, res) => {
-  const results = await Payment.findAll({
     include: [
       {
         model: Transaction,
-        include: [
-          {
-            model: Customer,
-          },
-        ],
-      },
+        include: [ Customer ]
+      }
     ],
+    order: [['paymentDate', 'DESC']]
   });
-  return res.json(results);
+
+  return res.json(payments);
 });
 
+/**
+ * Obtener pagos de un usuario por rango de fechas
+ * Query params: ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ */
+const getPaymentsByUserByDateRange = catchError(async (req, res) => {
+  const { userId } = req.params;
+  const { startDate, endDate } = req.query;
 
-const getpaymentCount = catchError(async(req, res) => {
-    const results = await Payment.findAll();
-    let paymentCount = results.length;
-    paymentCount = paymentCount + 1
-    const formattedPaymentCount = paymentCount.toString().padStart(7, '0')
-    console.log(formattedPaymentCount)
-    return res.json(formattedPaymentCount);
+  if (!startDate || !endDate) {
+    return res.status(400).json({ message: "Debes enviar startDate y endDate en formato YYYY-MM-DD" });
+  }
+
+  // 1️⃣ Buscar IDs de pagos para el usuario
+  const paymentUserRecords = await PaymentUsers.findAll({
+    where: { userId },
+    attributes: ['paymentId']
+  });
+
+  const paymentIds = paymentUserRecords.map(pu => pu.paymentId);
+
+  if (paymentIds.length === 0) return res.json([]);
+
+  // 2️⃣ Buscar pagos que estén en el rango de fechas
+  const payments = await Payment.findAll({
+    where: {
+      id: paymentIds,
+      paymentDate: {
+        [Op.gte]: new Date(startDate),
+        [Op.lte]: new Date(endDate)
+      }
+    },
+    include: [
+      {
+        model: Transaction,
+        include: [ Customer ]
+      }
+    ],
+    order: [['paymentDate', 'DESC']]
+  });
+
+  return res.json(payments);
 });
 
+const getDailyClosure = catchError(async (req, res) => {
+  const { userId } = req.params;
+  const { date } = req.query;
 
-const create = async (req, res) => {
-  const { userId, ...paymentData } = req.body;
+  if (!userId || !date) {
+    return res.status(400).json({ message: "Faltan parámetros userId o date" });
+  }
 
-  try {
-    // Crear pago
-    const newPayment = await Payment.create(paymentData);
+  // Buscar el usuario para obtener su roleId
+  const user = await User.findByPk(userId);
+  if (!user) {
+    return res.status(404).json({ message: "Usuario no encontrado" });
+  }
 
-    // Registrar usuario que hizo el pago
-    if (userId) {
-      await PaymentUsers.create({
-        userId,
-        paymentId: newPayment.id,
+  let payments = [];
+
+  if (user.roleId === 3) {
+    // Role 3 -> Todos los pagos del día sin filtrar por usuario
+    payments = await Payment.findAll({
+      where: {
+        paymentDate: date, // solo por fecha
+      },
+    });
+  } else {
+    // Otros roles -> Filtrar por usuario como antes
+    const paymentUserRecords = await PaymentUser.findAll({
+      where: { userId },
+      attributes: ["paymentId"],
+    });
+
+    const paymentIds = paymentUserRecords.map((p) => p.paymentId);
+
+    if (paymentIds.length === 0) {
+      return res.json({
+        totals: { capital: 0, itbms: 0, interestsMorosity: 0 },
+        totalsByMethod: [],
       });
     }
 
-    res.status(201).json(newPayment);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error al crear el pago" });
+    payments = await Payment.findAll({
+      where: {
+        id: paymentIds,
+        paymentDate: date,
+      },
+    });
   }
-};
 
-
-const getOne = catchError(async(req, res) => {
-    const { id } = req.params;
-    const result = await Payment.findByPk(id);
-    if(!result) return res.sendStatus(404);
-    return res.json(result);
-});
-
-const remove = catchError(async(req, res) => {
-    const { id } = req.params;
-    const result = await Payment.destroy({ where: {id} });
-    if(!result) return res.sendStatus(404);
-    return res.sendStatus(204);
-});
-
-const update = catchError(async(req, res) => {
-    const { id } = req.params;
-    const result = await Payment.update(
-        req.body,
-        { where: {id}, returning: true }
-    );
-    if(result[0] === 0) return res.sendStatus(404);
-    return res.json(result[1][0]);
-});
-
-const setAllRegistered = catchError(async (req, res) => {
-  const [updatedCount] = await Payment.update(
-    { isRegistered: true }, // valores a actualizar
-    { where: {} }           // sin condición = todos los registros
+  // Totales generales
+  const totals = payments.reduce(
+    (acc, p) => {
+      acc.capital += p.capital || 0;
+      acc.itbms += p.itbms || 0;
+      acc.interestsMorosity += (p.interestAmount || 0) + (p.morosidadAmount || 0);
+      return acc;
+    },
+    { capital: 0, itbms: 0, interestsMorosity: 0 }
   );
 
-  return res.json({
-    message: `Se actualizaron ${updatedCount} pagos a isRegistered = true`,
+  // Totales por método
+  const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+  const totalsByMethodMap = {};
+
+  payments.forEach((p) => {
+    const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+    if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+    totalsByMethodMap[method] += (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.morosidadAmount || 0));
   });
-});
-const setRegisteredByIds = catchError(async (req, res) => {
-  const { ids } = req.body; // ids debe ser un array, ej: [1, 2, 3]
 
-  if (!ids || !Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: 'Debes enviar un array de IDs válido' });
-  }
+  const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
+    method,
+    total,
+  }));
 
-  const [updatedCount] = await Payment.update(
-    { isRegistered: true },
-    { where: { id: ids } }
-  );
-
-  return res.json({
-    message: `Se actualizaron ${updatedCount} pagos a isRegistered = true`,
-  });
+  res.json({ totals, totalsByMethod });
 });
 
 
 
-
-
-const getPaymentsByUser = async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    // 1️⃣ Buscar todos los registros de PaymentUsers para ese usuario
-    const paymentUserRecords = await PaymentUsers.findAll({
-      where: { userId },
-      attributes: ['paymentId']
-    });
-
-    const paymentIds = paymentUserRecords.map(pu => pu.paymentId);
-
-    if (paymentIds.length === 0) {
-      return res.json([]); // si no tiene pagos, devolvemos array vacío
-    }
-
-    // 2️⃣ Buscar los payments por los ids y agregar include de Transaction + Customer
-    const payments = await Payment.findAll({
-      where: { id: paymentIds },
-      include: [
-        {
-          model: Transaction,
-          include: [
-            {
-              model: Customer
-            }
-          ]
-        }
-      ],
-      order: [['paymentDate', 'DESC']]
-    });
-
-    res.json(payments);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error al obtener los pagos del usuario' });
-  }
-};
 
 
 
 module.exports = {
-    getAll,
-    getpaymentCount,
-    create,
-    getOne,
-    remove,
-    update,
-    removeByMonth,
-    setAllRegistered,
-    setRegisteredByIds,
-    getPaymentsByUser
-    
-}
+  getAll,
+  getpaymentCount,
+  create,
+  getOne,
+  remove,
+  update,
+  removeByMonth,
+  setAllRegistered,
+  setRegisteredByIds,
+  getPaymentsByUser,
+  getPaymentsByUserAndMonth,
+  getPaymentsByUserByDateRange,
+  getDailyClosure
+};
