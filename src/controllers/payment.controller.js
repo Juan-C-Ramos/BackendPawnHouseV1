@@ -286,7 +286,7 @@ const getPaymentsByUserByDateRange = catchError(async (req, res) => {
 
 const getDailyClosure = catchError(async (req, res) => {
   const { userId } = req.params;
-  const { date } = req.query;
+  const { date, splitItbms } = req.query;
 
   if (!userId || !date) {
     return res.status(400).json({ message: "Faltan parámetros userId o date" });
@@ -303,9 +303,7 @@ const getDailyClosure = catchError(async (req, res) => {
   if (user.roleId === 3) {
     // Role 3 -> Todos los pagos del día sin filtrar por usuario
     payments = await Payment.findAll({
-      where: {
-        paymentDate: date, // solo por fecha
-      },
+      where: { paymentDate: date },
     });
   } else {
     // Otros roles -> Filtrar por usuario como antes
@@ -331,34 +329,55 @@ const getDailyClosure = catchError(async (req, res) => {
     });
   }
 
-  // Totales generales
-  const totals = payments.reduce(
-    (acc, p) => {
-      acc.capital += p.capital || 0;
-      acc.itbms += p.itbms || 0;
-      acc.interestsMorosity += (p.interestAmount || 0) + (p.morosidadAmount || 0);
-      return acc;
-    },
-    { capital: 0, itbms: 0, interestsMorosity: 0 }
-  );
+  // --- Función reutilizable para calcular totales ---
+  const calculateTotals = (list) => {
+    // Totales generales
+    const totals = list.reduce(
+      (acc, p) => {
+        acc.capital += p.capital || 0;
+        acc.itbms += p.itbms || 0;
+        acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        return acc;
+      },
+      { capital: 0, itbms: 0, interestsMorosity: 0 }
+    );
 
-  // Totales por método
-  const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
-  const totalsByMethodMap = {};
+    // Totales por método
+    const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+    const totalsByMethodMap = {};
 
-  payments.forEach((p) => {
-    const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
-    if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
-    totalsByMethodMap[method] += (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.morosidadAmount || 0));
+    list.forEach((p) => {
+      const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+      if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+      totalsByMethodMap[method] +=
+        (p.capital || 0) +
+        (p.itbms || 0) +
+        ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+    });
+
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
+      method,
+      total,
+    }));
+
+    return { totals, totalsByMethod };
+  };
+
+  // --- Caso normal (lo que ya tenías) ---
+  if (!splitItbms || splitItbms === "false") {
+    return res.json(calculateTotals(payments));
+  }
+
+  // --- Caso con separación ---
+  const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
+  const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
+
+  return res.json({
+    withITBMS: calculateTotals(withItbms),
+    withoutITBMS: calculateTotals(withoutItbms),
   });
-
-  const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
-    method,
-    total,
-  }));
-
-  res.json({ totals, totalsByMethod });
 });
+
 
 
 
