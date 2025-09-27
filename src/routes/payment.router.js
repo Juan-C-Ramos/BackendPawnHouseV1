@@ -11,7 +11,8 @@ const {
   getPaymentsByUser,    // obtiene pagos de un usuario
   getPaymentsByUserAndMonth, // obtiene pagos de un usuario filtrados por mes/año
   getPaymentsByUserByDateRange,
-  getDailyClosure       // obtiene cierre diario
+  getDailyClosure,       // obtiene cierre diario
+  getAllPaymentUser
 } = require('../controllers/payment.controller.js');
 
 const express = require('express');
@@ -23,6 +24,8 @@ const routerPayment = express.Router();
 routerPayment.route('/')
   .get(getAll)   // Obtener todos los pagos
   .post(create); // Crear nuevo pago
+routerPayment.route('/paymentsUsers')
+  .get(getAllPaymentUser)   // Obtener todos los pagos
 
 // 📌 Marcar todos los pagos como registrados
 routerPayment.route('/setAllRegistered')

@@ -19,6 +19,16 @@ const getAll = async (req, res) => {
   }
 };
 
+const getAllPaymentUser = async (req, res) => {
+  try {
+    const paymentsUsers = await PaymentUser.findAll();
+    return res.json(paymentsUsers);
+  } catch (error) {
+    console.error("Error en getAll:", error);
+    return res.status(500).json({ message: "Error al obtener los pagos" });
+  }
+};
+
 /**
  * Contar cantidad de pagos (ejemplo: para facturación)
  */
@@ -397,5 +407,6 @@ module.exports = {
   getPaymentsByUser,
   getPaymentsByUserAndMonth,
   getPaymentsByUserByDateRange,
-  getDailyClosure
+  getDailyClosure,
+  getAllPaymentUser
 };
