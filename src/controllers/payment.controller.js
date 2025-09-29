@@ -410,7 +410,7 @@ const getPaymentsByDate = catchError(async (req, res) => {
     include: [
       {
         model: Transaction,
-        include: [Customer],
+        include: [Customer, Payment],
       },
     ],
     order: [["paymentDate", "DESC"]],
@@ -479,7 +479,7 @@ const getPaymentsByDateRange = catchError(async (req, res) => {
     include: [
       {
         model: Transaction,
-        include: [Customer],
+        include: [Customer, Payment],
       },
     ],
     order: [["paymentDate", "DESC"]],
