@@ -4,6 +4,8 @@ const Payment = require("../models/Payment.js");
 const PaymentUser = require("../models/PaymentsUsers.js");
 const catchError = require('../utils/catchError');
 const User = require("../models/User.js");
+const Transaction = require("../models/Transaction.js");
+const Customer = require("../models/Customer.js");
 
 
 /**
@@ -391,6 +393,144 @@ const getDailyClosure = catchError(async (req, res) => {
 
 
 
+/**
+ * Obtener pagos de una fecha específica (paymentDate)
+ * Query param opcional: ?splitItbms=true/false
+ */
+const getPaymentsByDate = catchError(async (req, res) => {
+  const { date } = req.params;
+  const { splitItbms } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ message: "Debes enviar una fecha" });
+  }
+
+  const payments = await Payment.findAll({
+    where: { paymentDate: date },
+    include: [
+      {
+        model: Transaction,
+        include: [Customer],
+      },
+    ],
+    order: [["paymentDate", "DESC"]],
+  });
+
+  const calculateTotals = (list) => {
+    const totals = list.reduce(
+      (acc, p) => {
+        acc.capital += p.capital || 0;
+        acc.itbms += p.itbms || 0;
+        acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        return acc;
+      },
+      { capital: 0, itbms: 0, interestsMorosity: 0 }
+    );
+
+    const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+    const totalsByMethodMap = {};
+
+    list.forEach((p) => {
+      const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+      if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+      totalsByMethodMap[method] +=
+        (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+    });
+
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
+      method,
+      total,
+    }));
+
+    return { totals, totalsByMethod, payments };
+  };
+
+  if (!splitItbms || splitItbms === "false") {
+    return res.json(calculateTotals(payments));
+  }
+
+  const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
+  const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
+
+  return res.json({
+    withITBMS: calculateTotals(withItbms),
+    withoutITBMS: calculateTotals(withoutItbms), payments
+  });
+});
+
+/**
+ * Obtener pagos en un rango de fechas (paymentDate)
+ * Query params: ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&splitItbms=true/false
+ */
+const getPaymentsByDateRange = catchError(async (req, res) => {
+  const { startDate, endDate, splitItbms } = req.query;
+
+  if (!startDate || !endDate) {
+    return res.status(400).json({ message: "Debes enviar startDate y endDate en formato YYYY-MM-DD" });
+  }
+
+  const payments = await Payment.findAll({
+    where: {
+      paymentDate: {
+        [Op.gte]: new Date(startDate),
+        [Op.lte]: new Date(endDate),
+      },
+    },
+    include: [
+      {
+        model: Transaction,
+        include: [Customer],
+      },
+    ],
+    order: [["paymentDate", "DESC"]],
+  });
+
+  const calculateTotals = (list) => {
+    const totals = list.reduce(
+      (acc, p) => {
+        acc.capital += p.capital || 0;
+        acc.itbms += p.itbms || 0;
+        acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        return acc;
+      },
+      { capital: 0, itbms: 0, interestsMorosity: 0 }
+    );
+
+    const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+    const totalsByMethodMap = {};
+
+    list.forEach((p) => {
+      const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+      if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+      totalsByMethodMap[method] +=
+        (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+    });
+
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
+      method,
+      total,
+    }));
+
+    return { totals, totalsByMethod, payments };
+  };
+
+  if (!splitItbms || splitItbms === "false") {
+    return res.json(calculateTotals(payments));
+  }
+
+  const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
+  const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
+
+  return res.json({
+    withITBMS: calculateTotals(withItbms),
+    withoutITBMS: calculateTotals(withoutItbms), payments
+  });
+});
+
+
+
+
+
 
 
 
@@ -408,5 +548,7 @@ module.exports = {
   getPaymentsByUserAndMonth,
   getPaymentsByUserByDateRange,
   getDailyClosure,
-  getAllPaymentUser
+  getAllPaymentUser,
+  getPaymentsByDate,
+  getPaymentsByDateRange
 };
