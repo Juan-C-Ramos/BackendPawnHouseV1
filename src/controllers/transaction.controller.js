@@ -12,7 +12,12 @@ const Customer = require("../models/Customer.js");
 const Role = require("../models/Role.js");
 const Cuote = require("../models/Cuote.js");
 
+
+const HistorialSaldo = require("../models/HistorialSaldo");
+
+
 const getAll = catchError(async (req, res) => {
+  // Traemos todas las transacciones con sus relaciones normales
   const results = await Transaction.findAll({
     order: [['id', 'ASC']],
     include: [
@@ -20,8 +25,8 @@ const getAll = catchError(async (req, res) => {
       Customer,
       {
         model: User,
-        include: [Role], // Incluye el modelo Role
-        attributes: { exclude: ["password"] }, // Excluye el campo password
+        include: [Role],
+        attributes: { exclude: ["password"] },
       },
       {
         model: Inventory,
@@ -38,8 +43,36 @@ const getAll = catchError(async (req, res) => {
     ],
   });
 
-  return res.json(results);
+  // Traemos todos los historiales para hacer el mapeo eficiente
+  const historiales = await HistorialSaldo.findAll();
+
+  // Creamos un mapa pagoId → historial
+  const historialMap = {};
+  historiales.forEach(h => {
+    historialMap[h.pagoId] = h;
+  });
+
+  // Recorremos cada transacción y cada pago para agregar los saldos
+  const resultsWithSaldos = results.map(transaction => {
+    const t = transaction.toJSON();
+
+    if (t.Payments && Array.isArray(t.Payments)) {
+      t.Payments = t.Payments.map(payment => {
+        const historial = historialMap[payment.id];
+        return {
+          ...payment,
+          saldoAnterior: historial ? historial.saldoAnterior : null,
+          nuevoSaldo: historial ? historial.nuevoSaldo : null,
+        };
+      });
+    }
+
+    return t;
+  });
+
+  return res.json(resultsWithSaldos);
 });
+
 
 const getIdContract = catchError(async (req, res) => {
   const results = await Transaction.findAll();
@@ -98,16 +131,19 @@ const getTransactionsByCustomer = async (req, res) => {
   }
 };
 
+
+
 const getOne = catchError(async (req, res) => {
   const { id } = req.params;
+
   const result = await Transaction.findByPk(id, {
     include: [
       Contract,
       Customer,
       {
         model: User,
-        include: [Role], // Incluye el modelo Role
-        attributes: { exclude: ["password"] }, // Excluye el campo password
+        include: [Role],
+        attributes: { exclude: ["password"] },
       },
       {
         model: Inventory,
@@ -123,10 +159,42 @@ const getOne = catchError(async (req, res) => {
       },
     ],
   });
-  console.log(result);
+
   if (!result) return res.sendStatus(404);
-  return res.json(result);
+
+  // Convertimos el resultado a objeto plano
+  const transaction = result.toJSON();
+
+  // Obtenemos todos los historiales de los pagos relacionados
+  if (transaction.payments && transaction.payments.length > 0) {
+    const paymentIds = transaction.payments.map(p => p.id);
+
+    // Traemos solo los historiales de esos pagos
+    const historiales = await HistorialSaldo.findAll({
+      where: { pagoId: paymentIds },
+    });
+
+    // Creamos un mapa para fácil acceso
+    const historialMap = {};
+    historiales.forEach(h => {
+      historialMap[h.pagoId] = h;
+    });
+
+
+    // Agregamos los saldos a cada pago
+    transaction.payments = transaction.payments.map(payment => {
+      const historial = historialMap[payment.id];
+      return {
+        ...payment,
+        saldoAnterior: historial ? historial.saldoAnterior : null,
+        nuevoSaldo: historial ? historial.nuevoSaldo : null,
+      };
+    });
+  }
+
+  return res.json(transaction);
 });
+
 
 const remove = catchError(async (req, res) => {
   const { id } = req.params;

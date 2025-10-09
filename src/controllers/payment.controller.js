@@ -37,15 +37,37 @@ function getNextPaymentDate(fecha) {
 /**
  * Obtener todos los pagos
  */
+
 const getAll = async (req, res) => {
   try {
     const payments = await Payment.findAll();
-    return res.json(payments);
+
+    // Obtener todos los historiales a la vez (más eficiente que 1 por 1)
+    const historiales = await HistorialSaldo.findAll();
+
+    // Crear un mapa para acceso rápido por pagoId
+    const historialMap = {};
+    historiales.forEach(h => {
+      historialMap[h.pagoId] = h; // si hay más de uno por pago, podrías agruparlos en un array
+    });
+
+    // Añadir el historial a cada pago
+    const paymentsWithSaldo = payments.map(payment => {
+      const historial = historialMap[payment.id];
+      return {
+        ...payment.toJSON(),
+        saldoAnterior: historial ? historial.saldoAnterior : null,
+        nuevoSaldo: historial ? historial.nuevoSaldo : null,
+      };
+    });
+
+    return res.json(paymentsWithSaldo);
   } catch (error) {
     console.error("Error en getAll:", error);
     return res.status(500).json({ message: "Error al obtener los pagos" });
   }
 };
+
 
 const getAllPaymentUser = async (req, res) => {
   try {
