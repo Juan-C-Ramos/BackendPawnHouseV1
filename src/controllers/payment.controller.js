@@ -8,6 +8,8 @@ const Transaction = require("../models/Transaction.js");
 const Customer = require("../models/Customer.js");
 
 const HistorialSaldo = require('../models/HistorialSaldo');
+const PaymentUsers = require("../models/PaymentsUsers.js");
+const Role = require("../models/Role.js");
 
 function getNextPaymentDate(fecha) {
   const d = new Date(fecha);
@@ -127,13 +129,14 @@ const create = catchError(async (req, res) => {
     transactionId,
     amount,
     capital,
-    interestAmount, 
+    interestAmount,
     layPaymentFee,
     itbms,
     paymentDate,
     paymentMethod,
-    calcularIntereses
+    calcularIntereses,
   } = req.body;
+
   console.log(req.body);
 
   if (!userId || !transactionId || !amount) {
@@ -161,19 +164,20 @@ const create = catchError(async (req, res) => {
     transactionId,
   });
 
-  await PaymentUser.create({
+  // 4️⃣ Registrar el usuario creador
+  await PaymentUsers.create({
     userId,
     paymentId: newPayment.id,
   });
 
-  console.log('Nuevo pago creado:', newPayment);
-
-  // 4️⃣ Calcular nuevos valores
+  // 5️⃣ Calcular nuevos valores
   let nuevoCapital = Math.max(transaction.capital - capital, 0);
   let nuevaMorosidad = Math.max((transaction.morosidadAmount || 0) - layPaymentFee, 0);
 
   // Si hubo intereses pendientes, se acumulan como morosidad
-  const interesesPendientes = (transaction.capital * (transaction.interestsPorcent / 100)) - interestAmount;
+  const interesesPendientes =
+    (transaction.capital * (transaction.interestsPorcent / 100)) - interestAmount;
+
   if ((interesesPendientes > 0) && calcularIntereses) {
     nuevaMorosidad = parseFloat((nuevaMorosidad + interesesPendientes).toFixed(2));
   }
@@ -181,7 +185,7 @@ const create = catchError(async (req, res) => {
   const nuevoSaldo = nuevoCapital + nuevaMorosidad;
   const nextPaymentDate = getNextPaymentDate(paymentDate || new Date());
 
-  // 5️⃣ Actualizar transacción
+  // 6️⃣ Actualizar transacción
   if (nuevoCapital < 0.01 && nuevaMorosidad < 0.01) {
     await transaction.update({
       status: "paid",
@@ -197,15 +201,27 @@ const create = catchError(async (req, res) => {
     });
   }
 
-  // 6️⃣ Guardar historial de saldos
+  // 7️⃣ Guardar historial de saldos
   await HistorialSaldo.create({
     pagoId: newPayment.id,
     saldoAnterior,
-    nuevoSaldo
+    nuevoSaldo,
   });
 
-  return res.status(201).json(newPayment);
+  // 8️⃣ Traer datos del usuario creador (con Role)
+  const user = await User.findByPk(userId, {
+    attributes: { exclude: ["password"] },
+  });
+
+  // 9️⃣ Responder con todo lo necesario
+  return res.status(201).json({
+    ...newPayment.toJSON(),
+    saldoAnterior,
+    nuevoSaldo,
+    creadoPor: user ? user.toJSON() : null,
+  });
 });
+
 
 
 

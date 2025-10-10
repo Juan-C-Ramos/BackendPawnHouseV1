@@ -17,7 +17,7 @@ const HistorialSaldo = require("../models/HistorialSaldo");
 
 
 const getAll = catchError(async (req, res) => {
-  // Traemos todas las transacciones con sus relaciones normales
+  // Traer todas las transacciones y sus relaciones
   const results = await Transaction.findAll({
     order: [['id', 'ASC']],
     include: [
@@ -26,7 +26,7 @@ const getAll = catchError(async (req, res) => {
       {
         model: User,
         include: [Role],
-        attributes: { exclude: ["password"] },
+        attributes: { exclude: ['password'] },
       },
       {
         model: Inventory,
@@ -38,31 +38,53 @@ const getAll = catchError(async (req, res) => {
       },
       {
         model: Cuote,
-        as: "transactionCuotes",
+        as: 'transactionCuotes',
       },
     ],
   });
 
-  // Traemos todos los historiales para hacer el mapeo eficiente
+  // Traer todos los historiales
   const historiales = await HistorialSaldo.findAll();
 
-  // Creamos un mapa pagoId → historial
+  // Traer las relaciones PaymentUsers y los usuarios
+  const paymentUsers = await PaymentUsers.findAll();
+  const users = await User.findAll({
+    include: [Role],
+    attributes: { exclude: ['password'] },
+  });
+
+  // Crear mapas
   const historialMap = {};
   historiales.forEach(h => {
     historialMap[h.pagoId] = h;
   });
 
-  // Recorremos cada transacción y cada pago para agregar los saldos
-  const resultsWithSaldos = results.map(transaction => {
+  const userMap = {};
+  users.forEach(u => {
+    userMap[u.id] = u.toJSON();
+  });
+
+  const paymentUserMap = {};
+  paymentUsers.forEach(pu => {
+    if (userMap[pu.userId]) {
+      paymentUserMap[pu.paymentId] = userMap[pu.userId];
+    }
+  });
+
+  // Armar respuesta final
+  const resultsWithExtras = results.map(transaction => {
     const t = transaction.toJSON();
 
     if (t.Payments && Array.isArray(t.Payments)) {
       t.Payments = t.Payments.map(payment => {
         const historial = historialMap[payment.id];
+        const creador = paymentUserMap[payment.id];
+
         return {
           ...payment,
           saldoAnterior: historial ? historial.saldoAnterior : null,
           nuevoSaldo: historial ? historial.nuevoSaldo : null,
+          creadoPor: creador || null,
         };
       });
     }
@@ -70,8 +92,9 @@ const getAll = catchError(async (req, res) => {
     return t;
   });
 
-  return res.json(resultsWithSaldos);
+  return res.json(resultsWithExtras);
 });
+
 
 
 const getIdContract = catchError(async (req, res) => {
