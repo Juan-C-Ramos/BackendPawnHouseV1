@@ -14,6 +14,7 @@ const Cuote = require("../models/Cuote.js");
 
 
 const HistorialSaldo = require("../models/HistorialSaldo");
+const { Op } = require("sequelize");
 
 
 const getAll = catchError(async (req, res) => {
@@ -498,6 +499,59 @@ const setPaidTransactions = catchError(async (req, res) => {
 });
 
 
+// GET /transactions/filter
+const getTransactionsByDate = catchError(async (req, res) => {
+  const { startDate, endDate } = req.query;
+
+  // Si no hay fechas, devolvemos todas
+  const whereClause = {};
+  if (startDate && endDate) {
+    // rango de fechas
+    whereClause.createdAt = { 
+      [Op.between]: [new Date(startDate), new Date(endDate)]
+    };
+  } else if (startDate) {
+    // fecha única
+    const date = new Date(startDate);
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+    whereClause.createdAt = { 
+      [Op.gte]: date, 
+      [Op.lt]: nextDay 
+    };
+  }
+
+  const transactions = await Transaction.findAll({
+    where: whereClause,
+    include: [
+      Contract,
+      Customer,
+      {
+        model: User,
+        include: [Role],
+        attributes: { exclude: ["password"] },
+      },
+      {
+        model: Inventory,
+        include: [Category, Branch],
+      },
+      {
+        model: Payment,
+        include: [Cuote],
+      },
+      {
+        model: Cuote,
+        as: "transactionCuotes",
+      },
+    ],
+    order: [["createdAt", "ASC"]],
+  });
+
+  return res.json(transactions);
+});
+
+
+
 
 module.exports = {
   getAll,
@@ -514,5 +568,6 @@ module.exports = {
   getIdContract,
   createManyContracts,
   getTransactionsByCustomer,
-  setPaidTransactions
+  setPaidTransactions,
+  getTransactionsByDate
 };
