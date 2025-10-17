@@ -135,6 +135,7 @@ const create = catchError(async (req, res) => {
     paymentDate,
     paymentMethod,
     calcularIntereses,
+    nuevaMora
   } = req.body;
 
   console.log(req.body);
@@ -196,7 +197,7 @@ const create = catchError(async (req, res) => {
   } else {
     await transaction.update({
       capital: nuevoCapital,
-      morosidadAmount: nuevaMorosidad,
+      morosidadAmount: nuevaMora,
       nextPaymentDate,
     });
   }
