@@ -15,6 +15,7 @@ const Cuote = require("../models/Cuote.js");
 
 const HistorialSaldo = require("../models/HistorialSaldo");
 const { Op } = require("sequelize");
+const PaymentUsers = require("../models/PaymentsUsers.js");
 
 
 const getAll = catchError(async (req, res) => {
@@ -186,38 +187,58 @@ const getOne = catchError(async (req, res) => {
 
   if (!result) return res.sendStatus(404);
 
-  // Convertimos el resultado a objeto plano
   const transaction = result.toJSON();
 
-  // Obtenemos todos los historiales de los pagos relacionados
   if (transaction.payments && transaction.payments.length > 0) {
-    const paymentIds = transaction.payments.map(p => p.id);
+    const paymentIds = transaction.payments.map((p) => p.id);
 
-    // Traemos solo los historiales de esos pagos
+    // 1️⃣ Historiales de saldo
     const historiales = await HistorialSaldo.findAll({
       where: { pagoId: paymentIds },
     });
 
-    // Creamos un mapa para fácil acceso
-    const historialMap = {};
-    historiales.forEach(h => {
-      historialMap[h.pagoId] = h;
+    // 2️⃣ PaymentUsers
+    const paymentUsers = await PaymentUsers.findAll({
+      where: { paymentId: paymentIds },
+    });
+    const paymentUsersArray = Array.isArray(paymentUsers) ? paymentUsers : [];
+
+    // 3️⃣ Usuarios creadores
+    const userIds = paymentUsersArray.map((pu) => pu.userId);
+    const users = await User.findAll({
+      where: { id: userIds },
+      attributes: { exclude: ["password"] },
+      include: [Role],
     });
 
+    // 4️⃣ Mapas
+    const historialMap = {};
+    historiales.forEach((h) => (historialMap[h.pagoId] = h));
 
-    // Agregamos los saldos a cada pago
-    transaction.payments = transaction.payments.map(payment => {
+    const paymentUserMap = {};
+    paymentUsersArray.forEach((pu) => (paymentUserMap[pu.paymentId] = pu.userId));
+
+    const userMap = {};
+    users.forEach((u) => (userMap[u.id] = u.toJSON()));
+
+    // 5️⃣ Agregar info combinada
+    transaction.payments = transaction.payments.map((payment) => {
       const historial = historialMap[payment.id];
+      const userId = paymentUserMap[payment.id];
+      const creadoPor = userId ? userMap[userId] || null : null;
+
       return {
         ...payment,
         saldoAnterior: historial ? historial.saldoAnterior : null,
         nuevoSaldo: historial ? historial.nuevoSaldo : null,
+        creadoPor,
       };
     });
   }
 
   return res.json(transaction);
 });
+
 
 
 const remove = catchError(async (req, res) => {
