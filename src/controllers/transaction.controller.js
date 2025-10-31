@@ -524,24 +524,23 @@ const setPaidTransactions = catchError(async (req, res) => {
 const getTransactionsByDate = catchError(async (req, res) => {
   const { startDate, endDate } = req.query;
 
-  // Si no hay fechas, devolvemos todas
-  const whereClause = {};
+  // Condiciones de búsqueda
+  const whereClause = {
+    status: { [Op.ne]: "refinanciado" }, // Excluir refinanciadas
+  };
+
+  // Filtro por startDate usando DATEONLY
   if (startDate && endDate) {
-    // rango de fechas
-    whereClause.createdAt = { 
-      [Op.between]: [new Date(startDate), new Date(endDate)]
+    // rango de fechas exacto
+    whereClause.startDate = {
+      [Op.between]: [startDate, endDate],
     };
   } else if (startDate) {
-    // fecha única
-    const date = new Date(startDate);
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-    whereClause.createdAt = { 
-      [Op.gte]: date, 
-      [Op.lt]: nextDay 
-    };
+    // solo una fecha
+    whereClause.startDate = startDate;
   }
 
+  // Consulta
   const transactions = await Transaction.findAll({
     where: whereClause,
     include: [
@@ -565,11 +564,12 @@ const getTransactionsByDate = catchError(async (req, res) => {
         as: "transactionCuotes",
       },
     ],
-    order: [["createdAt", "ASC"]],
+    order: [["startDate", "ASC"]],
   });
 
   return res.json(transactions);
 });
+
 
 
 
