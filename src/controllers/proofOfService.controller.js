@@ -8,18 +8,47 @@ const getAll = catchError(async(req, res) => {
     return res.json(results);
 });
 
-const create = catchError(async(req, res) => {
+const ProofOfServices = require('../models/ProofOfServices');
+const Customer = require('../models/Customer');
 
-    const {filename} = req.file
+const create = catchError(async (req, res) => {
+  const { filename, url, customerId } = req.body;
 
-    const proofOfServiceDB = await ProofOfService.findOne({where: {filename}})
+  // Validar datos obligatorios
+  if (!filename || !url || !customerId) {
+    return res.status(400).json({ message: "Faltan datos obligatorios: filename, url o customerId." });
+  }
 
-    if (proofOfServiceDB) return res.sendStatus(404)
-    const url = `${req.protocol}://${req.headers.host}/public/proofOfService/${filename}`
-    
-    
-    const result = await ProofOfService.create({filename, url});
-    return res.status(201).json(result);
+  // Verificar si el cliente existe
+  const customer = await Customer.findByPk(customerId);
+  if (!customer) {
+    return res.status(404).json({ message: "Cliente no encontrado." });
+  }
+
+  // Verificar si ya tiene una prueba de servicio registrada
+  const existingProof = await ProofOfServices.findOne({ where: { customerId } });
+  if (existingProof) {
+    existingProof.filename = filename;
+    existingProof.url = url;
+    await existingProof.save();
+
+    return res.status(200).json({
+      message: "🟡 Prueba de servicio actualizada correctamente.",
+      proof: existingProof,
+    });
+  }
+
+  // Crear nueva prueba
+  const newProof = await ProofOfServices.create({
+    filename,
+    url,
+    customerId,
+  });
+
+  return res.status(201).json({
+    message: "✅ Prueba de servicio guardada correctamente en la base de datos.",
+    proof: newProof,
+  });
 });
 
 

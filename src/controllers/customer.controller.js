@@ -11,6 +11,7 @@ const Payment = require('../models/Payment.js');
 const Cuote = require('../models/Cuote.js');
 
 const { Op } = require("sequelize");
+const IdPhoto = require('../models/IDPhoto.js');
 
 const getFiltered = catchError(async (req, res) => {
   const { name, cedula, userId, phone } = req.query; // 👈 agregamos phone
@@ -53,7 +54,9 @@ const getFiltered = catchError(async (req, res) => {
             as: "transactionCuotes"
           }
         ]
-      }
+      },
+      IdPhoto,
+      ProofOfServices
     ]
   });
 
