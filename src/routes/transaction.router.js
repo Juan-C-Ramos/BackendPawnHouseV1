@@ -15,7 +15,8 @@ const {
     createManyContracts,
     getTransactionsByCustomer,
     setPaidTransactions,
-    getTransactionsByDate // 👉 asegurarte de exportarlo desde el controlador
+    getTransactionsByDate,
+    getDeudasTransactions, // 👉 asegurarte de exportarlo desde el controlador
 } = require('../controllers/transaction.controller.js');
 
 const express = require('express');
@@ -30,6 +31,10 @@ routerTransaction.route('/')
 // 👉 filtrar por fecha o rango de fechas
 routerTransaction.route('/filter')
     .get(getTransactionsByDate);
+
+    routerTransaction.route("/deudas")
+    .get(getDeudasTransactions);
+    
 
 // marcar pagos como pagados
 routerTransaction.route('/setPaidTransactions')

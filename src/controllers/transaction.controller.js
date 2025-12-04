@@ -570,6 +570,44 @@ const getTransactionsByDate = catchError(async (req, res) => {
   return res.json(transactions);
 });
 
+const getDeudasTransactions = async (req, res) => {
+  try {
+    const deudas = await Transaction.findAll({
+      where: {
+        status: "inProgress",   // 🔥 Solo transacciones pendientes / con deuda
+      },
+      order: [["id", "ASC"]],
+      include: [
+        Contract,
+        Customer,
+        {
+          model: User,
+          include: [Role],
+          attributes: { exclude: ["password"] },
+        },
+        {
+          model: Inventory,
+          include: [Category, Branch],
+        },
+        {
+          model: Payment,
+          include: [Cuote],
+        },
+        {
+          model: Cuote,
+          as: "transactionCuotes",
+        },
+      ],
+    });
+
+    return res.status(200).json(deudas);
+  } catch (error) {
+    console.error("Error al obtener transacciones de deudas:", error);
+    return res.status(500).json({ message: "Error al obtener deudas" });
+  }
+};
+
+
 
 
 
@@ -590,5 +628,6 @@ module.exports = {
   createManyContracts,
   getTransactionsByCustomer,
   setPaidTransactions,
-  getTransactionsByDate
+  getTransactionsByDate,
+  getDeudasTransactions,
 };
