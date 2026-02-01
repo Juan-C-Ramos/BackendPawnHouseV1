@@ -151,7 +151,7 @@ const create = catchError(async (req, res) => {
   }
 
   // 2️⃣ Saldo anterior
-  const saldoAnterior = transaction.capital + (transaction.morosidadAmount || 0);
+  const saldoAnterior = transaction.capital.toFixed(2);
 
   // 3️⃣ Crear pago
   const newPayment = await Payment.create({
