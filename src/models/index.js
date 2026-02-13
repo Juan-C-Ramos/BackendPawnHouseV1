@@ -15,6 +15,13 @@ const IdPhoto = require("./IDPhoto.js")
 const Cuotes = require("./Cuote.js")
 const LoginRegister = require("./LoginRegister.js")
 
+// Importaciones de Empeños
+// Módulo de Empeños
+const ContratoEmpeno = require('./ModuloEmpeños/ContratoEmpeño')
+const PrendaEmpeno = require('./ModuloEmpeños/PrendaEmpeño')
+const Pagos = require('./ModuloEmpeños/Pagos')
+
+
 //Users -> Customer);
 Customer.belongsTo(User)
 User.hasMany(Customer)
@@ -109,4 +116,72 @@ ProofOfServices.belongsTo(Customer) //proofOfServicesId
 Customer.hasOne(ProofOfServices)
 
 
+/////////////////////////////////////////////
+// MODULO DE EMPEÑOS
+/////////////////////////////////////////////
 
+// Customer -> ContratoEmpeño
+Customer.hasMany(ContratoEmpeno, {
+  foreignKey: 'customerId'
+})
+ContratoEmpeno.belongsTo(Customer, {
+  foreignKey: 'customerId'
+})
+
+// User -> ContratoEmpeño
+User.hasMany(ContratoEmpeno, {
+  foreignKey: 'userId'
+})
+ContratoEmpeno.belongsTo(User, {
+  foreignKey: 'userId'
+})
+
+// ContratoEmpeño -> PrendaEmpeño
+ContratoEmpeno.hasMany(PrendaEmpeno, {
+  foreignKey: 'contratoEmpenoId'
+})
+PrendaEmpeno.belongsTo(ContratoEmpeno, {
+  foreignKey: 'contratoEmpenoId'
+})
+
+// ContratoEmpeño -> PagosEmpeno
+ContratoEmpeno.hasMany(Pagos, {
+  foreignKey: 'contratoEmpenoId'
+})
+Pagos.belongsTo(ContratoEmpeno, {
+  foreignKey: 'contratoEmpenoId'
+})
+
+// User -> PagosEmpeno
+User.hasMany(Pagos, {
+  foreignKey: 'userId'
+})
+Pagos.belongsTo(User, {
+  foreignKey: 'userId'
+})
+
+
+module.exports = {
+  // modelos existentes
+  Customer,
+  Inventory,
+  User,
+  Transaction,
+  Payment,
+  Category,
+  Branch,
+  Role,
+  ImageInventory,
+  ProfilePhoto,
+  Contract,
+  ProofOfServices,
+  InventoryBill,
+  IdPhoto,
+  Cuotes,
+  LoginRegister,
+
+  // 🔥 módulo de empeños
+  ContratoEmpeno,
+  PrendaEmpeno,
+  Pagos
+}

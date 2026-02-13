@@ -221,6 +221,34 @@ const setUser = catchError(async (req, res) => {
     }
 });
 
+const searchCustomers = async (req, res) => {
+  try {
+    const { q } = req.query; // texto de búsqueda
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({
+        message: "Escribe al menos 2 caracteres para buscar",
+      });
+    }
+
+    const customers = await Customer.findAll({
+      where: {
+        [Op.or]: [
+          { firstName: { [Op.iLike]: `%${q}%` } },   // por nombre
+          { lastName: { [Op.iLike]: `%${q}%` } },   // por nombre
+          { numberID: { [Op.iLike]: `%${q}%` } },   // por cédula
+        ],
+      },
+      limit: 10,
+    });
+
+    res.json(customers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error buscando clientes" });
+  }
+};
+
 module.exports = {
     getAll,
     create,
@@ -231,5 +259,7 @@ module.exports = {
     setIdPhoto,
     setUser,
     bulkCreate,
-    getFiltered
+    getFiltered,
+    searchCustomers
+    
 }

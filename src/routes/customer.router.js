@@ -1,4 +1,4 @@
-const { getAll, create, getOne, remove, update, setProofOfService, setIdPhoto, setUser, bulkCreate} = require('../controllers/customer.controller.js');
+const { getAll, create, getOne, remove, update, setProofOfService, setIdPhoto, setUser, bulkCreate, searchCustomers} = require('../controllers/customer.controller.js');
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
 
@@ -12,6 +12,9 @@ routerCustomer.get("/filter", getFiltered);
 routerCustomer.route('/')
     .get( getAll)
     .post( create);
+
+routerCustomer.route('/search')
+    .get(searchCustomers)
 
 routerCustomer.route('/bulk')
     .post(bulkCreate);
@@ -29,5 +32,7 @@ routerCustomer.route('/:id')
     .get( getOne)
     .delete( remove)
     .put( update);
+    
+
 
 module.exports = routerCustomer;

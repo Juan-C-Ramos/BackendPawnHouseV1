@@ -249,6 +249,7 @@ const remove = catchError(async (req, res) => {
 });
 
 const update = catchError(async (req, res) => {
+  console.log("aqui")
   const { id } = req.params;
   const result = await Transaction.update(req.body, {
     where: { id },

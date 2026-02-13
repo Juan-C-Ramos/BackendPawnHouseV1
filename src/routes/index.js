@@ -18,23 +18,39 @@ const routerCuote = require('./cuote.router.js');
 const { verifyJwt } = require('../utils/verifyJWT.js');
 const routerLoginRegister = require('./loginRegister.router.js');
 const routerRefinanciamientos = require('./refinanciamientos.router.js');
+const routerEmpenos = require ('./empeños.router.js')
 const router = express.Router();
+const pagosEmpenoRouter = require('./pagosEmpeno.router.js');
+
+const routerDeclaracion = require('./declaracion.router.js');
+
+const routerContratoPDF = require("./contratoPdf.router");
+const pagosEmpenos = require("./reciboPago.routes.js");
 
 
 
 
-router.use('/customer',verifyJwt, routerCustomer),
+
+// Rutas de pagos de empeños
+router.use('/pagos-empenos', pagosEmpenoRouter);
+
+
+
+
+router.use('/customer', routerCustomer),
 router.use('/inventories',verifyJwt, routerInventory),
 router.use('/mainData',verifyJwt, routerMainData),
 router.use('/payments',verifyJwt, routerPayment),
 router.use('/transactions',verifyJwt, routerTransaction),
 router.use('/users', routerUser),
-router.use('/categories',verifyJwt, routerCategory),
+router.use('/categories', routerCategory),
 router.use('/roles', routerRole),
 router.use('/branches',verifyJwt, routerBranch),
 router.use('/coutes',verifyJwt, routerCuote)
 router.use('/loginRegisters',verifyJwt, routerLoginRegister)
 router.use('/refinanciamientos',verifyJwt, routerRefinanciamientos);
+
+router.use('/empenos', routerEmpenos)
 
 // Images
 router.use('/images/inventory', routerImageInventory),
@@ -43,6 +59,12 @@ router.use('/contracts', routerContract),
 router.use('/images/proofOfService', routerProofOfService),
 router.use('/images/inventoryBill', routerInventoryBill),
 router.use('/images/idPhoto', routerIDPhoto),
+
+router.use('/', routerDeclaracion);
+router.use("/contrato-pdf", routerContratoPDF);
+router.use("/recibo-pdf", pagosEmpenos);
+
+
 
 
 module.exports = router;
