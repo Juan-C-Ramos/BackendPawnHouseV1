@@ -109,17 +109,29 @@ const getIdContract = catchError(async (req, res) => {
 });
 
 const create = catchError(async (req, res) => {
+  // 1️⃣ Crear la transacción
   const result = await Transaction.create(req.body);
 
-  const id = result.id;
-  const resultComplete = await Transaction.findByPk(id, {
+  // 2️⃣ Generar número de contrato
+  const year = new Date().getFullYear();
+
+  // Rellenar con ceros a la izquierda hasta 6 dígitos
+  const paddedId = String(result.id).padStart(6, "0");
+
+  const contractNumber = `${year}-${paddedId}`;
+
+  // 3️⃣ Guardarlo en la misma transacción
+  await result.update({ contractNumber });
+
+  // 4️⃣ Buscar completo con includes
+  const resultComplete = await Transaction.findByPk(result.id, {
     include: [
       Contract,
       Customer,
       {
         model: User,
-        include: [Role], // Incluye el modelo Role
-        attributes: { exclude: ["password"] }, // Excluye el campo password
+        include: [Role],
+        attributes: { exclude: ["password"] },
       },
       {
         model: Inventory,
@@ -136,10 +148,9 @@ const create = catchError(async (req, res) => {
     ],
   });
 
-  return res.json(resultComplete);
-
-  //return res.status(201).json(result);
+  res.status(201).json(resultComplete);
 });
+
 
 // GET /transaction/customer/:customerId
 const getTransactionsByCustomer = async (req, res) => {
