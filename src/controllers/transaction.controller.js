@@ -12,6 +12,8 @@ const Customer = require("../models/Customer.js");
 const Role = require("../models/Role.js");
 const Cuote = require("../models/Cuote.js");
 
+const Refinanciamientos = require("../models/Refinanciamientos");
+
 
 const HistorialSaldo = require("../models/HistorialSaldo");
 const { Op } = require("sequelize");
@@ -523,25 +525,19 @@ const setPaidTransactions = catchError(async (req, res) => {
 
 // GET /transactions/filter
 const getTransactionsByDate = catchError(async (req, res) => {
+  console.log("Query params recibidos:", req.query); // Verificar qué query params llegan
   const { startDate, endDate } = req.query;
 
-  // Condiciones de búsqueda
-  const whereClause = {
-    status: { [Op.ne]: "refinanciado" }, // Excluir refinanciadas
-  };
+  const whereClause = {};
 
-  // Filtro por startDate usando DATEONLY
   if (startDate && endDate) {
-    // rango de fechas exacto
     whereClause.startDate = {
       [Op.between]: [startDate, endDate],
     };
   } else if (startDate) {
-    // solo una fecha
     whereClause.startDate = startDate;
   }
 
-  // Consulta
   const transactions = await Transaction.findAll({
     where: whereClause,
     include: [
@@ -568,8 +564,53 @@ const getTransactionsByDate = catchError(async (req, res) => {
     order: [["startDate", "ASC"]],
   });
 
-  return res.json(transactions);
+  // 🔥 Aquí agregamos la lógica del refinanciamiento
+  const transactionsWithRefinancedAmount = await Promise.all(
+    transactions.map(async (transaction) => {
+      let refinancedAmount = 0;
+
+      // Solo si es refinanciamiento
+      if (
+        transaction.transactionType === "refinanciamiento" ||
+        transaction.transactionType === "prestamo refinanciado"
+      ) {
+        const refin = await Refinanciamientos.findOne({
+          where: { numeroContrato: transaction.id },
+        });
+
+        if (refin && refin.contratosRefinanciados?.length > 0) {
+          const oldTransactions = await Transaction.findAll({
+            where: {
+              id: {
+                [Op.in]: refin.contratosRefinanciados,
+              },
+            },
+          });
+          console.log(`Transacciones antiguas para contratos ${refin.contratosRefinanciados}:`, oldTransactions);
+
+          const totalCapitalMorosidad = oldTransactions.reduce(
+            (acc, t) =>
+              acc +
+              (Number(t.capital) || 0) +
+              (Number(t.morosidadAmount) || 0),
+            0
+          );
+
+          refinancedAmount =
+            (Number(transaction.amonunt) || 0) - totalCapitalMorosidad;
+        }
+      }
+
+      return {
+        ...transaction.toJSON(),
+        refinancedAmount,
+      };
+    })
+  );
+
+  return res.json(transactionsWithRefinancedAmount);
 });
+
 
 const getDeudasTransactions = async (req, res) => {
   try {
