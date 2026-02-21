@@ -13,7 +13,7 @@ const generarReciboPagoPDF = async (req, res) => {
       include: [
         {
           model: ContratoEmpeno,
-          include: [{ model: Customer }],
+          include: [{ model: Customer } ],
         },
       ],
     });
@@ -53,7 +53,12 @@ const generarReciboPagoPDF = async (req, res) => {
     doc
       .fontSize(8)
       .font("Helvetica")
-      .text("Casa de empeño y financiamiento", { align: "center" });
+      .text("Resolución No. 574 del 22 de agosto de 2025", { align: "center" });
+
+    doc
+      .fontSize(8)
+      .font("Helvetica")
+      .text("RUC 1556557158-2-2017 DV 56", { align: "center" });
 
     doc.moveDown(1.5);
 
