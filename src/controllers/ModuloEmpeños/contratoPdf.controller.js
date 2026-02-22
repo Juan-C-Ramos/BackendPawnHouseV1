@@ -16,7 +16,7 @@ const generarContratoEmpenoPDF = async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="contrato_empeno.pdf"'
+      'attachment; filename="contrato_empeno.pdf"',
     );
 
     doc.pipe(res);
@@ -69,7 +69,16 @@ const generarContratoEmpenoPDF = async (req, res) => {
       doc.fontSize(8).text("No. de Contrato:", 455, 30);
       doc.text(contrato?.numeroContrato || "N/A", 455, 40);
       doc.text("Fecha:", 455, 55);
-      doc.text(`${contrato?.fechaContrato || "N/A"}`, 500, 55);
+      const fecha = contrato?.fechaContrato
+  ? new Date(contrato.fechaContrato)
+      .toLocaleDateString("es-PA", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+  : "N/A";
+
+doc.text(fecha, 500, 55);
 
       // ===================== DATOS DE LUGAR =====================
       doc.moveTo(30, 100).stroke();
@@ -79,13 +88,13 @@ const generarContratoEmpenoPDF = async (req, res) => {
         .text(
           "LUGAR: Panamá, Rep. de Panamá, Ave España, Plaza Concordia, Oficina 247",
           30,
-          105
+          105,
         );
 
       doc.text(
         "TELÉFONO/FAX: 277 0036   CORREO: lirtecnologia@hotmail.com",
         30,
-        118
+        118,
       );
 
       // ===================== DATOS DEL CLIENTE =====================
@@ -94,19 +103,12 @@ const generarContratoEmpenoPDF = async (req, res) => {
       const nombreCompleto = `${cliente.firstName} ${cliente.lastName}`;
 
       doc.fontSize(8).text("NOMBRE DEL PRESTATARIO (Cliente):", 30, 130);
-      doc.text(
-        "__________________________________________________________",
-        200,
-        130
-      );
       doc.text(nombreCompleto, 200, 130);
 
       doc.text("CÉDULA/PASAPORTE:", 380, 130);
-      doc.text("____________________", 480, 130);
       doc.text(cliente.numberID || "", 480, 130);
 
       doc.text("TELÉFONO:", 380, 140);
-      doc.text("____________________", 480, 140);
       doc.text(cliente.phone || "", 480, 140);
 
       // Dirección
@@ -122,11 +124,6 @@ const generarContratoEmpenoPDF = async (req, res) => {
         .join(", ");
 
       doc.text("DIRECCIÓN:", 30, 145);
-      doc.text(
-        "_______________________________________________________________",
-        120,
-        145
-      );
       doc.text(direccionCompleta || "", 120, 145);
 
       // ===================== DESCRIPCIÓN DE PRENDAS =====================
@@ -140,10 +137,10 @@ const generarContratoEmpenoPDF = async (req, res) => {
       prendas.forEach((p, i) => {
         doc.text(
           `${i + 1}. ${p.nombre} - ${p.descripcion} (${p.categoria}) - B/. ${Number(
-            p.valorEstimado
+            p.valorEstimado,
           ).toFixed(2)}`,
           40,
-          y
+          y,
         );
 
         if (p.categoria === "Joyería") {
@@ -152,34 +149,62 @@ const generarContratoEmpenoPDF = async (req, res) => {
               p.pesoGramos || "N/A"
             }`,
             60,
-            y + 10
+            y + 10,
           );
           y += 20;
         } else {
           y += 15;
         }
+
+        // ===================== CHECKBOXES FACTURA / DECLARACIÓN =====================
+        doc.text(
+          "INDICACIÓN DE LA PRUEBA DE LA GARANTÍA PRENDARIA:",
+          30,
+          y + 10,
+        );
+
+        // valida si existe factura original
+        const tieneFacturaOriginal =
+          p.facturaOriginalNumero &&
+          p.facturaOriginalNumero.toString().trim() !== "";
+
+        // ---------- CHECKBOX FACTURA ----------
+
+        doc.rect(30, y + 20, 10, 10).stroke();
+
+        if (tieneFacturaOriginal) {
+          // marca la casilla
+          doc.text("X", 32, y + 20);
+
+          // muestra el número
+          doc.text(`Factura No. ${p.facturaOriginalNumero}`, 45, y + 20);
+        } else {
+          // línea vacía
+          doc.text("Factura No. ____________________", 45, y + 20);
+        }
+
+        // ---------- CHECKBOX DECLARACIÓN ----------
+
+        doc.rect(30, y + 35, 10, 10).stroke();
+
+        if (!tieneFacturaOriginal) {
+          // marca la casilla de declaración
+          doc.text("X", 32, y + 35);
+        }
+
+        doc.text(
+          'Declaración: "Yo declaro y aseguro, bajo juramento, que la garantía prendaria es de mi propiedad".',
+          45,
+          y + 35,
+          {
+            width: 500,
+          },
+        );
       });
 
       // Líneas tipo formulario
       doc.moveTo(30, y + 5).stroke();
       doc.moveTo(30, y + 20).stroke();
-
-      // ===================== CHECKBOXES FACTURA / DECLARACIÓN =====================
-      doc.text(
-        "INDICACIÓN DE LA PRUEBA DE LA GARANTÍA PRENDARIA:",
-        30,
-        y + 10
-      );
-
-      doc.rect(30, y + 20, 10, 10).stroke(); // checkbox factura
-      doc.text("Factura No. ____________________", 45, y + 20);
-
-      doc.rect(30, y + 35, 10, 10).stroke(); // checkbox declaración
-      doc.text(
-        'Declaración: "Yo declaro y aseguro, bajo juramento, que la garantía prendaria es de mi propiedad".',
-        45,
-        y + 35
-      );
 
       // ===================== MONTOS Y CONDICIONES =====================
       doc.moveTo(30, y + 50).stroke();
@@ -187,19 +212,19 @@ const generarContratoEmpenoPDF = async (req, res) => {
       doc
         .fontSize(8)
         .text(
-          `MONTO DEL PRÉSTAMO: B/. ${Number(
-            contrato.montoPrestamo
-          ).toFixed(2)}`,
+          `MONTO DEL PRÉSTAMO: B/. ${Number(contrato.montoPrestamo).toFixed(
+            2,
+          )}`,
           30,
-          y + 50
+          y + 50,
         );
 
       doc.text(
         `MONTO MÁXIMO A PRESTAR: B/. ${Number(
-          contrato.montoMaximoaPrestar
+          contrato.montoMaximoaPrestar,
         ).toFixed(2)}`,
         30,
-        y + 60
+        y + 60,
       );
 
       doc.text(
@@ -209,13 +234,13 @@ const generarContratoEmpenoPDF = async (req, res) => {
           contrato.interesMensualEfectivo || contrato.tasaInteres
         }%`,
         30,
-        y + 70
+        y + 70,
       );
 
       doc.text(
         `PLAZO: ${contrato.plazoMeses} meses   |   PERIODO DE GRACIA: ${contrato.periodoGraciaDias} días`,
         30,
-        y + 80
+        y + 80,
       );
 
       doc.text(
@@ -223,13 +248,13 @@ const generarContratoEmpenoPDF = async (req, res) => {
           contrato.autorizado || "N/A"
         } con cédula no. ${contrato.autorizadoID || "N/A"}`,
         30,
-        y + 90
+        y + 90,
       );
 
       doc.text(
         `Declara el prestatario (cliente) estar de acuerdo con el monto prestado, monto máximo a prestar, intereses y el plazo; y acepta expresamente este Contrato de Empeño, en todos los términos y condiciones DESCRITOS AL FRENTE Y AL REVERSO y prueba de ello lo firma a voluntad.`,
         30,
-        y + 100
+        y + 100,
       );
 
       // ===================== FIRMAS =====================

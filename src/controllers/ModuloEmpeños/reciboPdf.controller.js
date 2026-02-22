@@ -54,6 +54,10 @@ const generarReciboPagoPDF = async (req, res) => {
       .fontSize(8)
       .font("Helvetica")
       .text("Resolución No. 574 del 22 de agosto de 2025", { align: "center" });
+    doc
+      .fontSize(8)
+      .font("Helvetica")
+      .text("Casa de empeño", { align: "center" });
 
     doc
       .fontSize(8)
@@ -88,6 +92,12 @@ const generarReciboPagoPDF = async (req, res) => {
 
     doc.moveDown(0.4);
     doc.text("Concepto: Pago de cuota", { align: "left" });
+    doc.moveDown(0.4);
+    doc.text(`Saldo capital Actual: B/. ${Number(pago.montoCapitalAnterior || 0).toFixed(2)}`, { align: "left" });
+    doc.moveDown(0.4);
+    doc.text(`Saldo intereses Actual: B/. ${Number(pago.montoInteresAnterior || 0).toFixed(2)}`, { align: "left" });
+    doc.moveDown(0.4);
+    doc.text(`Saldo morosidad Actual: B/. ${Number(pago.montoMorosidadAnterior || 0).toFixed(2)}`, { align: "left" });
 
     doc.moveDown(0.6);
 
@@ -119,11 +129,21 @@ const generarReciboPagoPDF = async (req, res) => {
     doc.moveDown(0.6);
 
     // =================== SALDO ===================
-    doc.text(`Saldo: B/. ${Number(contrato.capitalAdeudado || 0).toFixed(2)}`, {
+    doc.text(`Saldo capital nuevo: B/. ${Number(pago.montoCapitalNuevo || 0).toFixed(2)}`, {
       align: "left",
     });
 
-    doc.moveDown(0.8);
+    doc.moveDown(0.4);
+    doc.text(`Saldo intereses nuevo: B/. ${Number(pago.montoInteresNuevo || 0).toFixed(2)}`, {
+      align: "left",
+    });
+
+    doc.moveDown(0.4);
+    doc.text(`Saldo morosidad nuevo: B/. ${Number(pago.montoMorosidadNuevo || 0).toFixed(2)}`, {
+      align: "left",
+    });
+
+    doc.moveDown(0.4);
 
     
 
