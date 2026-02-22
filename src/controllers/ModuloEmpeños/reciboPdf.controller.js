@@ -77,9 +77,10 @@ const generarReciboPagoPDF = async (req, res) => {
     doc.fontSize(10).font("Helvetica");
 
     doc.text(`RECIBO N°: ${pago.numeroPago}`, { align: "left" });
-    doc.text(`FECHA: ${new Date(pago.fechaPago).toLocaleDateString("es-PA")}`, {
+    doc.text(`FECHA: ${pago.fechaPago.toISOString().split("T")[0]}`, {
       align: "left",
     });
+    console.log("Fecha del pago:", pago.fechaPago);
 
     doc.moveDown(1);
 

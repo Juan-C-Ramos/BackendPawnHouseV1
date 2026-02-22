@@ -57,11 +57,8 @@ const ultima = contrato.ultimaFechaPagoInteres
 
 let mesesAtrasados =
   (hoy.getFullYear() - ultima.getFullYear()) * 12 +
-  (hoy.getMonth() - ultima.getMonth());
+  (hoy.getMonth() - ultima.getMonth()) + 1;
 
-if (hoy.getDate() < ultima.getDate()) {
-  mesesAtrasados--;
-}
 mesesAtrasados = Math.max(0, mesesAtrasados);
 
 const interesMensual = Number(contrato.interesMensualEfectivo || 0);
@@ -93,12 +90,21 @@ const morosidadNuevo = Math.max(
   morosidadAnterior - Number(montoMorosidad)
 );
 
+const fechaLocal = new Date(
+  hoy.getFullYear(),
+  hoy.getMonth(),
+  hoy.getDate()
+);
+
+
+
 
     // ====== REGISTRAR PAGO ======
     const nuevoPago = await PagosEmpeños.create(
+      
       {
         numeroPago: `TEMP`,
-        fechaPago: new Date(),
+        fechaPago:fechaLocal,
 
         montoCapital: montoCapital,
         montoCapitalAnterior: capitalAnterior,
