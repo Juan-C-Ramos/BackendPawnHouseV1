@@ -4,7 +4,8 @@ const router = express.Router();
 const {
   registrarPagoEmpeno,
   listarPagosPorContrato,
-  obtenerPagosPorContrato
+  obtenerPagosPorContrato,
+  updatePagoEmpeno
 } = require("../controllers/ModuloEmpeños/pagos.controller.js");
 
 
@@ -16,6 +17,8 @@ router.get(
 
 // Registrar un pago
 router.post("/pago", registrarPagoEmpeno);
+
+router.put('/pagos/:id', updatePagoEmpeno);
 
 // Listar pagos de un contrato
 router.get(

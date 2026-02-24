@@ -303,4 +303,95 @@ exports.listarContratosEmpeno = async (req, res) => {
 };
 
 
+exports.updateContratoEmpeno = async (req, res) => {
 
+  const t = await sequelize.transaction();
+
+  try {
+
+    const { id } = req.params;
+    const { contrato, prendas } = req.body;
+
+    // función para evitar "" en campos numeric
+    const toNumberOrNull = (value) => {
+      if (value === "" || value === undefined) return null;
+      return value === null ? null : Number(value);
+    };
+
+    // 1. verificar contrato existe
+    const contratoDb = await ContratoEmpeno.findByPk(id, { transaction: t });
+
+    if (!contratoDb) {
+
+      await t.rollback();
+
+      return res.status(404).json({
+        message: "Contrato no encontrado"
+      });
+
+    }
+
+    // 2. actualizar contrato
+    await contratoDb.update(contrato, { transaction: t });
+
+    // 3. actualizar prendas
+    if (Array.isArray(prendas)) {
+
+      for (const prenda of prendas) {
+
+        const prendaDb = await PrendaEmpeno.findByPk(prenda.id, {
+          transaction: t
+        });
+
+        if (!prendaDb) continue;
+
+        await prendaDb.update({
+
+          nombre: prenda.nombre,
+          descripcion: prenda.descripcion,
+          categoria: prenda.categoria,
+
+          valorEstimado: toNumberOrNull(prenda.valorEstimado),
+          pesoGramos: toNumberOrNull(prenda.pesoGramos),
+          kilateje: toNumberOrNull(prenda.kilateje),
+
+          status: prenda.status
+
+        }, { transaction: t });
+
+      }
+
+    }
+
+    // 4. confirmar transacción
+    await t.commit();
+
+    // 5. devolver contrato actualizado completo
+    const contratoActualizado = await ContratoEmpeno.findByPk(id, {
+
+      include: [
+        { association: "customer" },
+        { association: "user" },
+        { association: "prendaEmpenos" },
+        { association: "pagosEmpeños" }
+      ]
+
+    });
+
+    res.json(contratoActualizado);
+
+  }
+  catch (error) {
+
+    await t.rollback();
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Error al actualizar contrato",
+      error: error.message
+    });
+
+  }
+
+};

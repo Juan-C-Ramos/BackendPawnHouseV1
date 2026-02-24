@@ -250,3 +250,81 @@ exports.obtenerPagosPorContrato = async (req, res) => {
 };
 
 
+exports.updatePagoEmpeno = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
+  try {
+
+    const { id } = req.params;
+    const data = req.body;
+
+    const pagoDb = await PagosEmpeños.findByPk(id, {
+      transaction: t
+    });
+
+    if (!pagoDb) {
+
+      await t.rollback();
+
+      return res.status(404).json({
+        message: "Pago no encontrado"
+      });
+
+    }
+
+    // helper anti ""
+    const toNumberOrNull = (value) => {
+      if (value === "" || value === undefined) return null;
+      return value === null ? null : Number(value);
+    };
+
+    await pagoDb.update({
+
+      numeroPago: data.numeroPago,
+      fechaPago: data.fechaPago,
+
+      montoCapital: toNumberOrNull(data.montoCapital),
+      montoCapitalNuevo: toNumberOrNull(data.montoCapitalNuevo),
+      montoCapitalAnterior: toNumberOrNull(data.montoCapitalAnterior),
+
+      montoInteres: toNumberOrNull(data.montoInteres),
+      montoInteresNuevo: toNumberOrNull(data.montoInteresNuevo),
+      montoInteresAnterior: toNumberOrNull(data.montoInteresAnterior),
+
+      montoMorosidad: toNumberOrNull(data.montoMorosidad),
+      montoMorosidadNuevo: toNumberOrNull(data.montoMorosidadNuevo),
+      montoMorosidadAnterior: toNumberOrNull(data.montoMorosidadAnterior),
+
+      montoITBMS: toNumberOrNull(data.montoITBMS),
+
+      metodoPago: data.metodoPago,
+      estatusPago: data.estatusPago,
+
+      montoTotalPago: toNumberOrNull(data.montoTotalPago)
+
+    }, {
+      transaction: t
+    });
+
+    await t.commit();
+
+    res.json(pagoDb);
+
+  }
+  catch (error) {
+
+    await t.rollback();
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Error actualizando pago",
+      error: error.message
+    });
+
+  }
+
+};
+
+

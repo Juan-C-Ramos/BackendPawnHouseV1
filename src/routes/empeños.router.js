@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
+// Controllers
 const contratoEmpenoCtrl = require('../controllers/ModuloEmpeños/contratoEmpeno.controller')
 
 const pagosEmpenoCtrl = require('../controllers/ModuloEmpeños/pagos.controller')
@@ -11,25 +12,40 @@ const {
   getProximosAVencer,
   getEnDeuda,
   crearContratoEmpeno,
-  listarContratosEmpeno
-} = require('../controllers/ModuloEmpeños/contratoEmpeno.controller');
-
+  listarContratosEmpeno,
+  updateContratoEmpeno // ✅ AGREGAR ESTE
+} = require('../controllers/ModuloEmpeños/contratoEmpeno.controller')
 
 const {
   obtenerPrendasPorContrato,
-} = require("../controllers/ModuloEmpeños/prendaEmpeno.controller");
+} = require("../controllers/ModuloEmpeños/prendaEmpeno.controller")
 
-// 🔹 Endpoint que tu widget está llamando:
+
+
+/*
+|--------------------------------------------------------------------------
+| PRENDAS
+|--------------------------------------------------------------------------
+*/
+
+// Obtener prendas por contrato
 router.get(
   "/contratos-empeno/:contratoId/prendas",
   obtenerPrendasPorContrato
-);
+)
 
 
 
+/*
+|--------------------------------------------------------------------------
+| ESTADO DE CUENTA
+|--------------------------------------------------------------------------
+*/
 
-
-
+router.get(
+  '/contratos/:contratoId/estado-cuenta',
+  estadoCuentaCtrl.estadoCuentaContratoEmpeno
+)
 
 
 
@@ -38,25 +54,66 @@ router.get(
 | CONTRATOS DE EMPEÑO
 |--------------------------------------------------------------------------
 */
-router.get(
-'/contratos/:contratoId/estado-cuenta',
-estadoCuentaCtrl.estadoCuentaContratoEmpeno
+
+// Crear contrato
+router.post(
+  '/contratos',
+  crearContratoEmpeno
 )
 
-// Crear contrato de empeño (con prendas)
-router.post('/contratos', crearContratoEmpeno)
 
-// Obtener todos los contratos (filtros opcionales: userId, customerId)
-router.get('/contratos', listarContratosEmpeno)
+// Listar contratos
+router.get(
+  '/contratos',
+  listarContratosEmpeno
+)
 
-// Obtener un contrato por ID (detalle completo)
-router.get('/contratos/:id', contratoEmpenoCtrl.getContratoEmpenoById)
 
-router.post('/pagos', pagosEmpenoCtrl.registrarPagoEmpeno)
+// Obtener contrato por ID
+router.get(
+  '/contratos/:id',
+  contratoEmpenoCtrl.getContratoEmpenoById
+)
 
-// -------- DASHBOARD --------
-router.get('/dashboard/proximos-a-vencer', getProximosAVencer);
-router.get('/dashboard/en-deuda', getEnDeuda);
+
+// ✅ ACTUALIZAR CONTRATO Y PRENDAS
+router.put(
+  '/contratos/:id',
+  updateContratoEmpeno
+)
+
+
+
+/*
+|--------------------------------------------------------------------------
+| PAGOS
+|--------------------------------------------------------------------------
+*/
+
+// Registrar pago
+router.post(
+  '/pagos',
+  pagosEmpenoCtrl.registrarPagoEmpeno
+)
+
+
+
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  '/dashboard/proximos-a-vencer',
+  getProximosAVencer
+)
+
+router.get(
+  '/dashboard/en-deuda',
+  getEnDeuda
+)
+
 
 
 module.exports = router
