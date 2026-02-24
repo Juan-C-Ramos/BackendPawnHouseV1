@@ -331,8 +331,37 @@ exports.updateContratoEmpeno = async (req, res) => {
 
     }
 
-    // 2. actualizar contrato
-    await contratoDb.update(contrato, { transaction: t });
+    // función para evitar "" en numeric y FK
+
+
+// normalizar contrato completo
+const contratoUpdate = {
+  ...contrato,
+
+  customerId: toNumberOrNull(contrato.customerId),
+
+  montoPrestamo: toNumberOrNull(contrato.montoPrestamo),
+  montoMaximoaPrestar: toNumberOrNull(contrato.montoMaximoaPrestar),
+  tasaInteres: toNumberOrNull(contrato.tasaInteres),
+  interesMensualEfectivo: toNumberOrNull(contrato.interesMensualEfectivo),
+
+  plazoMeses: toNumberOrNull(contrato.plazoMeses),
+  periodoGraciaDias: toNumberOrNull(contrato.periodoGraciaDias),
+
+  capitalTotal: toNumberOrNull(contrato.capitalTotal),
+  capitalAdeudado: toNumberOrNull(contrato.capitalAdeudado),
+  totalPagadoCapital: toNumberOrNull(contrato.totalPagadoCapital),
+
+  interesAdeudado: toNumberOrNull(contrato.interesAdeudado),
+  totalPagadoInteres: toNumberOrNull(contrato.totalPagadoInteres),
+
+  morosidadAdeudada: toNumberOrNull(contrato.morosidadAdeudada),
+  totalPagadoMorosidad: toNumberOrNull(contrato.totalPagadoMorosidad),
+  morosidadTotal: toNumberOrNull(contrato.morosidadTotal),
+};
+
+// actualizar contrato
+await contratoDb.update(contratoUpdate, { transaction: t });
 
     // 3. actualizar prendas
     if (Array.isArray(prendas)) {
