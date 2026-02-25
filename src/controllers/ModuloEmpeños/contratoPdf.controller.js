@@ -4,8 +4,10 @@ const path = require("path");
 
 const generarContratoEmpenoPDF = async (req, res) => {
   try {
-    const { contrato, prendas, cliente } = req.body;
+    const { contrato, prendas, cliente, copia } = req.body;
     const logoPath = path.join(__dirname, "../../logoVFinal.png");
+
+    console.log("Datos recibidos para generar PDF:", { contrato, prendas, cliente, copia });
 
     // 8.5 x 5.5 pulgadas = 612 x 396 puntos
     const doc = new PDFDocument({
@@ -123,15 +125,15 @@ doc.text(fecha, 500, 55);
         .filter(Boolean)
         .join(", ");
 
-      doc.text("DIRECCIÓN:", 30, 145);
-      doc.text(direccionCompleta || "", 120, 145);
+      doc.text("DIRECCIÓN:", 30, 148);
+      doc.text(direccionCompleta || "", 100, 148);
 
       // ===================== DESCRIPCIÓN DE PRENDAS =====================
       doc.moveTo(30, 160).stroke();
 
       doc
         .fontSize(8)
-        .text("DESCRIPCIÓN DE LA(S) GARANTÍA(S) PRENDARIA(S):", 30, 155);
+        .text("DESCRIPCIÓN DE LA(S) GARANTÍA(S) PRENDARIA(S):", 30, 158);
 
       let y = 165;
       prendas.forEach((p, i) => {
@@ -280,11 +282,14 @@ doc.text(fecha, 500, 55);
 
     dibujarHoja(doc, "Copia para el cliente");
 
-    doc.addPage();
-    dibujarHoja(doc, "Copia para archivo");
+    if (copia === "Nuevo") {
+      doc.addPage();
+      dibujarHoja(doc, "Copia para archivo");
+      
+      doc.addPage();
+      dibujarHoja(doc, "Copia para bodega");
+    }
 
-    doc.addPage();
-    dibujarHoja(doc, "Copia para bodega");
 
     doc.end();
   } catch (error) {
