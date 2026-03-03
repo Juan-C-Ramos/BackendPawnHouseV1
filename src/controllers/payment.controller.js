@@ -183,7 +183,7 @@ const create = catchError(async (req, res) => {
     nuevaMorosidad = parseFloat((nuevaMorosidad + interesesPendientes).toFixed(2));
   }
 
-  const nuevoSaldo = nuevoCapital + nuevaMorosidad;
+  const nuevoSaldo = nuevoCapital;
   const nextPaymentDate = getNextPaymentDate(paymentDate || new Date());
 
   // 6️⃣ Actualizar transacción

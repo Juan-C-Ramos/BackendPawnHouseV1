@@ -23,23 +23,20 @@ exports.registrarPagoEmpeno = async (req, res) => {
       contratoEmpenoId,
       customerId,
       userId,
-
       montoTotalRecibido,
       metodoPago,
       aplicaITBMS,
-
-      // Lo calculado en FRONT
-      montoMorosidad,
-      montoInteres,
-      montoITBMS,
-      montoCapital,
-
-      // Banderas
+      descontarITBMS,
       liquidarContrato,
       forzarInteres,
+
+      // preview del front (para validar)
+      montoMorosidad: frontMorosidad,
+      montoInteres: frontInteres,
+      montoITBMS: frontITBMS,
+      montoCapital: frontCapital,
     } = req.body;
 
-    // 1) Obtener contrato actual
     const contrato = await ContratoEmpeno.findByPk(contratoEmpenoId, {
       transaction: t,
     });
@@ -49,81 +46,186 @@ exports.registrarPagoEmpeno = async (req, res) => {
       return res.status(404).json({ message: "Contrato no encontrado" });
     }
 
-    // ====== 🔥 GENERAR INTERÉS POR MESES ATRASADOS (BACKEND) ======
-const hoy = new Date();
-const ultima = contrato.ultimaFechaPagoInteres
-  ? new Date(contrato.ultimaFechaPagoInteres)
-  : new Date(contrato.fechaContrato);
+    const hoy = new Date();
 
-let mesesAtrasados =
-  (hoy.getFullYear() - ultima.getFullYear()) * 12 +
-  (hoy.getMonth() - ultima.getMonth()) + 1;
+    // ================================
+    // 1️⃣ CALCULAR MESES (IGUAL QUE FRONT)
+    // ================================
 
-mesesAtrasados = Math.max(0, mesesAtrasados);
+    let mesesAtrasados = 0;
 
-const interesMensual = Number(contrato.interesMensualEfectivo || 0);
-const interesGenerado = interesMensual * mesesAtrasados;
+    if (contrato.ultimaFechaPagoInteres) {
+      const ultima = new Date(contrato.ultimaFechaPagoInteres);
 
-// 🔹 Sumamos el interés generado al saldo anterior
-const interesAnteriorAjustado =
-  Number(contrato.interesAdeudado) + interesGenerado;
+      mesesAtrasados =
+        (hoy.getFullYear() - ultima.getFullYear()) * 12 +
+        (hoy.getMonth() - ultima.getMonth());
 
+      if (mesesAtrasados < 0) mesesAtrasados = 0;
+    }
 
-    // ====== ANTES DEL PAGO (snapshot REAL) ======
-const capitalAnterior = Number(contrato.capitalAdeudado);
-const interesAnterior = interesAnteriorAjustado; // <-- IMPORTANTE
-const morosidadAnterior = Number(contrato.morosidadAdeudada);
+    // ================================
+    // 2️⃣ CALCULAR INTERÉS IGUAL QUE FRONT
+    // ================================
 
-// ====== DESPUÉS DEL PAGO ======
-const capitalNuevo = Math.max(
-  0,
-  capitalAnterior - Number(montoCapital)
-);
+    const capitalBase = Number(contrato.capitalAdeudado || 0);
+    const tasa = Number(contrato.tasaInteres || 0);
+    const morosidadAdeudada = Number(contrato.morosidadAdeudada || 0);
 
-const interesNuevo = Math.max(
-  0,
-  interesAnterior - Number(montoInteres)
-);
+    const interesMensual = capitalBase * (tasa / 100);
 
-const morosidadNuevo = Math.max(
-  0,
-  morosidadAnterior - Number(montoMorosidad)
-);
+    let interesAdeudadoCalculado =
+      interesMensual * mesesAtrasados +
+      Number(contrato.interesAdeudado || 0);
 
-const fechaLocal = new Date(
-  hoy.getFullYear(),
-  hoy.getMonth(),
-  hoy.getDate()
-);
+    if (liquidarContrato)
+      interesAdeudadoCalculado = Math.max(
+        interesAdeudadoCalculado,
+        interesMensual
+      );
 
+    if (forzarInteres)
+      interesAdeudadoCalculado = Math.max(
+        interesAdeudadoCalculado,
+        interesMensual
+      );
 
+    let saldo = Number(montoTotalRecibido);
 
+    // ================================
+    // 3️⃣ MOROSIDAD
+    // ================================
 
-    // ====== REGISTRAR PAGO ======
+    const pagoMorosidad = Math.min(saldo, morosidadAdeudada);
+    saldo -= pagoMorosidad;
+
+    // ================================
+    // 4️⃣ INTERÉS (MISMA LÓGICA EXACTA)
+    // ================================
+
+    let pagoInteres = 0;
+    let itbms = 0;
+    let pagoInteresBruto = 0;
+
+    if (aplicaITBMS && descontarITBMS) {
+      const interesNetoPosible = saldo / 1.07;
+
+      pagoInteres = Math.min(
+        interesNetoPosible,
+        interesAdeudadoCalculado
+      );
+
+      pagoInteresBruto = pagoInteres * 1.07;
+      itbms = pagoInteresBruto - pagoInteres;
+
+      saldo -= pagoInteresBruto;
+    } else {
+      pagoInteresBruto = Math.min(
+        saldo,
+        interesAdeudadoCalculado
+      );
+
+      pagoInteres = pagoInteresBruto;
+
+      if (aplicaITBMS) {
+        itbms = pagoInteres * 0.07;
+      }
+
+      saldo -= pagoInteresBruto;
+    }
+
+    // ================================
+    // 5️⃣ CAPITAL
+    // ================================
+
+    const pagoCapital = Math.min(
+      saldo,
+      Number(contrato.capitalAdeudado || 0)
+    );
+
+    // ================================
+    // 6️⃣ VALIDAR CONTRA FRONT
+    // ================================
+
+    const tolerance = 0.01;
+
+    const coincide =
+      Math.abs(pagoMorosidad - Number(frontMorosidad)) < tolerance &&
+      Math.abs(pagoInteres - Number(frontInteres)) < tolerance &&
+      Math.abs(itbms - Number(frontITBMS)) < tolerance &&
+      Math.abs(pagoCapital - Number(frontCapital)) < tolerance;
+
+    console.log("Backend:", {
+      pagoMorosidad,
+      pagoInteres,
+      itbms,
+      pagoCapital,
+    });
+
+    console.log("Front:", {
+      frontMorosidad,
+      frontInteres,
+      frontITBMS,
+      frontCapital,
+    });
+
+    if (!coincide) {
+      await t.rollback();
+      return res.status(400).json({
+        message: "Los cálculos no coinciden",
+        backend: {
+          pagoMorosidad,
+          pagoInteres,
+          itbms,
+          pagoCapital,
+        },
+      });
+    }
+
+    // ================================
+    // 7️⃣ NUEVOS SALDOS
+    // ================================
+
+    const capitalNuevo = Math.max(
+      0,
+      Number(contrato.capitalAdeudado) - pagoCapital
+    );
+
+    const interesNuevo = Math.max(
+      0,
+      interesAdeudadoCalculado - pagoInteres
+    );
+
+    const morosidadNuevo = Math.max(
+      0,
+      morosidadAdeudada - pagoMorosidad
+    );
+
+    // ================================
+    // 8️⃣ CREAR PAGO
+    // ================================
+
     const nuevoPago = await PagosEmpeños.create(
-      
       {
-        numeroPago: `TEMP`,
-        fechaPago:fechaLocal,
+        numeroPago: "TEMP",
+        fechaPago: hoy,
 
-        montoCapital: montoCapital,
-        montoCapitalAnterior: capitalAnterior,
+        montoCapital: pagoCapital,
+        montoCapitalAnterior: contrato.capitalAdeudado,
         montoCapitalNuevo: capitalNuevo,
 
-        montoInteres: montoInteres,
-        montoInteresAnterior: interesAnterior,
+        montoInteres: pagoInteres,
+        montoInteresAnterior: interesAdeudadoCalculado,
         montoInteresNuevo: interesNuevo,
 
-        montoMorosidad: montoMorosidad,
-        montoMorosidadAnterior: morosidadAnterior,
+        montoMorosidad: pagoMorosidad,
+        montoMorosidadAnterior: morosidadAdeudada,
         montoMorosidadNuevo: morosidadNuevo,
 
-        montoITBMS: montoITBMS,
-
-        estatusPago: "COMPLETADO",
-        metodoPago,
-
+        montoITBMS: itbms,
         montoTotalPago: montoTotalRecibido,
+        metodoPago,
+        estatusPago: "COMPLETADO",
 
         contratoEmpenoId,
         customerId,
@@ -132,43 +234,22 @@ const fechaLocal = new Date(
       { transaction: t }
     );
 
-    // 🔥 GENERAR NÚMERO DE RECIBO CON EL ID REAL
-const numeroReciboFinal = generarNumeroRecibo(nuevoPago.id);
+    // ================================
+    // 9️⃣ ACTUALIZAR CONTRATO
+    // ================================
 
-// Actualizamos el pago con el número definitivo
-await nuevoPago.update(
-  { numeroPago: numeroReciboFinal },
-  { transaction: t }
-);
+    contrato.capitalAdeudado = capitalNuevo;
+    contrato.interesAdeudado = interesNuevo;
+    contrato.morosidadAdeudada = morosidadNuevo;
 
+    contrato.totalPagadoCapital += pagoCapital;
+    contrato.totalPagadoInteres += pagoInteres;
+    contrato.totalPagadoMorosidad += pagoMorosidad;
 
-    contrato.totalPagadoCapital =
-  Number(contrato.totalPagadoCapital) + Number(montoCapital);
+    if (pagoInteres > 0) {
+      contrato.ultimaFechaPagoInteres = hoy;
+    }
 
-contrato.totalPagadoInteres =
-  Number(contrato.totalPagadoInteres) + Number(montoInteres);
-
-contrato.totalPagadoMorosidad =
-  Number(contrato.totalPagadoMorosidad) + Number(montoMorosidad);
-
-// ⚠️ OJO: aquí guardamos el saldo YA con intereses generados
-contrato.capitalAdeudado = capitalNuevo;
-contrato.interesAdeudado = interesNuevo; 
-contrato.morosidadAdeudada = morosidadNuevo;
-
-
-// 🔹 SIEMPRE que haya pago de interés → actualizamos última fecha
-if (Number(montoInteres) > 0) {
-  contrato.ultimaFechaPagoInteres = new Date();
-}
-
-// 🔹 Manejo de fechas de corte (opcional pero recomendado)
-contrato.anteriorFechaCorte = contrato.nuevaFechaCorte || null;
-contrato.nuevaFechaCorte = new Date();
-
-
-
-    // 🔹 Si se liquida y capital quedó en 0 → contrato PAGADO
     if (liquidarContrato && capitalNuevo === 0) {
       contrato.estatus = "PAGADO";
     }
@@ -178,30 +259,17 @@ contrato.nuevaFechaCorte = new Date();
     await t.commit();
 
     return res.status(201).json({
-      message: "Pago registrado y contrato actualizado correctamente",
+      message: "Pago registrado correctamente",
       pago: nuevoPago,
       contratoActualizado: contrato,
     });
   } catch (error) {
     await t.rollback();
     console.error(error);
-    return res.status(500).json({ message: "Error registrando el pago", error });
-  }
-};
-
-exports.obtenerPagosPorContrato = async (req, res) => {
-  try {
-    const { contratoEmpenoId } = req.params;
-
-    const pagos = await PagosEmpeños.findAll({
-      where: { contratoEmpenoId },
-      order: [["fechaPago", "DESC"]],
+    return res.status(500).json({
+      message: "Error registrando pago",
+      error,
     });
-
-    res.json(pagos);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error obteniendo pagos", error });
   }
 };
 
