@@ -135,74 +135,42 @@ doc.text(fecha, 500, 55);
         .fontSize(8)
         .text("DESCRIPCIÓN DE LA(S) GARANTÍA(S) PRENDARIA(S):", 30, 158);
 
-      let y = 165;
-      prendas.forEach((p, i) => {
-        doc.text(
-          `${i + 1}. ${p.nombre} - ${p.descripcion} (${p.categoria}) - B/. ${Number(
-            p.valorEstimado,
-          ).toFixed(2)}`,
-          40,
-          y,
-        );
+      let y = 170;
 
-        if (p.categoria === "Joyería") {
-          doc.text(
-            `Kilate: ${p.kilateje || "N/A"}   |   Gramos: ${
-              p.pesoGramos || "N/A"
-            }`,
-            60,
-            y + 10,
-          );
-          y += 20;
-        } else {
-          y += 15;
-        }
+prendas.forEach((p, i) => {
+  const descripcionBase = `${i + 1}. ${p.nombre} - ${p.descripcion} (${p.categoria}) ${p.kilateje ? `${p.kilateje} kts` : ""} ${p.pesoGramos ? `${p.pesoGramos} g` : ""} - B/. ${Number(
+    p.valorEstimado,
+  ).toFixed(2)}`;
 
-        // ===================== CHECKBOXES FACTURA / DECLARACIÓN =====================
-        doc.text(
-          "INDICACIÓN DE LA PRUEBA DE LA GARANTÍA PRENDARIA:",
-          30,
-          y + 10,
-        );
+  // Parte izquierda
+  doc.font("Helvetica").fontSize(8);
+  doc.text(descripcionBase, 40, y, {
+    continued: true,
+  });
 
-        // valida si existe factura original
-        const tieneFacturaOriginal =
-          p.facturaOriginalNumero &&
-          p.facturaOriginalNumero.toString().trim() !== "";
+  const tieneFacturaOriginal =
+    p.facturaOriginalNumero &&
+    p.facturaOriginalNumero.toString().trim() !== "";
 
-        // ---------- CHECKBOX FACTURA ----------
-
-        doc.rect(30, y + 20, 10, 10).stroke();
-
-        if (tieneFacturaOriginal) {
-          // marca la casilla
-          doc.text("X", 32, y + 20);
-
-          // muestra el número
-          doc.text(`Factura No. ${p.facturaOriginalNumero}`, 45, y + 20);
-        } else {
-          // línea vacía
-          doc.text("Factura No. ____________________", 45, y + 20);
-        }
-
-        // ---------- CHECKBOX DECLARACIÓN ----------
-
-        doc.rect(30, y + 35, 10, 10).stroke();
-
-        if (!tieneFacturaOriginal) {
-          // marca la casilla de declaración
-          doc.text("X", 32, y + 35);
-        }
-
-        doc.text(
-          'Declaración: "Yo declaro y aseguro, bajo juramento, que la garantía prendaria es de mi propiedad".',
-          45,
-          y + 35,
-          {
-            width: 500,
-          },
-        );
+  if (tieneFacturaOriginal) {
+    doc
+      .font("Helvetica-Bold")
+      .text(`  |  N° Factura Original: ${p.facturaOriginalNumero}`, {
+        continued: false,
       });
+  } else {
+    doc
+      .font("Helvetica-Bold")
+      .text(`  |  (Con Declaración Jurada)`, {
+        continued: false,
+      });
+  }
+
+  // Volver a fuente normal
+  doc.font("Helvetica");
+
+  y += 15; // altura fija porque ahora es UNA sola línea
+});
 
       // Líneas tipo formulario
       doc.moveTo(30, y + 5).stroke();
