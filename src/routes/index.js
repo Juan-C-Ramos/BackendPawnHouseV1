@@ -27,6 +27,11 @@ const routerDeclaracion = require('./declaracion.router.js');
 const routerContratoPDF = require("./contratoPdf.router");
 const pagosEmpenos = require("./reciboPago.routes.js");
 
+const reporteIngresos = require("./reportesEmpenos.routes.js");
+
+// Rutas de reportes de empeños
+router.use('/reportes-empenos', reporteIngresos);
+
 
 
 
