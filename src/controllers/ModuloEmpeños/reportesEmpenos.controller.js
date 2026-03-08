@@ -28,8 +28,7 @@ const reporteIngresos = async (req, res) => {
       where: {
         fechaPago: {
           [Op.between]: [fechaInicio, fechaFin],
-        },
-        estatusPago: "COMPLETADO",
+        }
       },
       include: [
         {
