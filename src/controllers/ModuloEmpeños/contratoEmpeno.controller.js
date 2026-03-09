@@ -424,3 +424,69 @@ await contratoDb.update(contratoUpdate, { transaction: t });
   }
 
 };
+
+
+exports.obtenerKpisDashboard = async (req, res) => {
+  try {
+
+    const hoy = new Date();
+
+    // =========================
+    // EMPEÑOS ACTIVOS
+    // =========================
+
+    const empenosActivos = await ContratoEmpeno.count({
+      where: {
+        estatus: "ACTIVO"
+      }
+    });
+
+    // =========================
+    // PRÓXIMOS A VENCER
+    // (5 días antes del corte)
+    // =========================
+
+    const fechaLimite = new Date();
+    fechaLimite.setDate(hoy.getDate() + 5);
+
+    const proximosAVencer = await ContratoEmpeno.count({
+      where: {
+        estatus: "ACTIVO",
+        nuevaFechaCorte: {
+          [Op.between]: [hoy, fechaLimite]
+        }
+      }
+    });
+
+    // =========================
+    // CONTRATOS EN DEUDA
+    // =========================
+
+hoy.setHours(0,0,0,0);
+
+const enDeuda = await ContratoEmpeno.count({
+  where: {
+    estatus: "ACTIVO",
+    [Op.or]: [
+      { morosidadAdeudada: { [Op.gt]: 0 } },
+      { nuevaFechaCorte: { [Op.lt]: hoy } }
+    ]
+  }
+});
+
+    return res.json({
+      empenosActivos,
+      proximosAVencer,
+      enDeuda
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Error obteniendo KPIs del dashboard"
+    });
+
+  }
+};

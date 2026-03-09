@@ -40,11 +40,20 @@ exports.registrarPagoEmpeno = async (req, res) => {
     const contrato = await ContratoEmpeno.findByPk(contratoEmpenoId, {
       transaction: t,
     });
+    
 
     if (!contrato) {
       await t.rollback();
       return res.status(404).json({ message: "Contrato no encontrado" });
     }
+
+    if (contrato.estatus === "PAGADO") {
+  await t.rollback();
+
+  return res.status(400).json({
+    message: "Este contrato ya está pagado. No se pueden registrar más pagos.",
+  });
+}
 
     const hoy = new Date();
 
@@ -233,6 +242,15 @@ exports.registrarPagoEmpeno = async (req, res) => {
       },
       { transaction: t }
     );
+    // generar numero real
+const numeroRecibo = generarNumeroRecibo(nuevoPago.id);
+
+await nuevoPago.update(
+{
+  numeroPago: numeroRecibo
+},
+{ transaction: t }
+);
 
     // ================================
     // 9️⃣ ACTUALIZAR CONTRATO
@@ -250,9 +268,13 @@ exports.registrarPagoEmpeno = async (req, res) => {
       contrato.ultimaFechaPagoInteres = hoy;
     }
 
-    if (liquidarContrato && capitalNuevo === 0) {
-      contrato.estatus = "PAGADO";
-    }
+    // ================================
+// CERRAR CONTRATO SI CAPITAL ES 0
+// ================================
+
+if (capitalNuevo === 0) {
+  contrato.estatus = "PAGADO";
+}
 
     await contrato.save({ transaction: t });
 

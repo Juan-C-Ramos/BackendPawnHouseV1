@@ -81,6 +81,105 @@ const reporteIngresos = async (req, res) => {
   }
 };
 
+
+const obtenerKpisReportes = async (req, res) => {
+  try {
+
+    const hoy = new Date();
+
+    const inicioMes = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth(),
+      1
+    );
+
+    const finMes = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth() + 1,
+      0
+    );
+
+    // ======================
+    // INGRESOS DEL MES
+    // ======================
+
+    const pagosMes = await Pagos.sum("montoTotalPago", {
+      where: {
+        fechaPago: {
+          [Op.between]: [inicioMes, finMes]
+        }
+      }
+    });
+
+    // ======================
+    // CONTRATOS ACTIVOS
+    // ======================
+
+    const contratosActivos = await ContratoEmpeno.count({
+      where: {
+        estatus: "ACTIVO"
+      }
+    });
+
+    // ======================
+    // CONTRATOS VENCIDOS
+    // ======================
+
+    const contratosVencidos = await ContratoEmpeno.count({
+      where: {
+        nuevaFechaCorte: {
+          [Op.lt]: hoy
+        },
+        estatus: "ACTIVO"
+      }
+    });
+
+    return res.json({
+      ingresosMes: pagosMes || 0,
+      contratosActivos,
+      contratosVencidos
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Error obteniendo KPIs"
+    });
+
+  }
+};
+
+// controllers/reportes/contratosActivos.controller.js
+
+
+const obtenerContratosActivos = async (req, res) => {
+  try {
+
+    const contratos = await ContratoEmpeno.findAll({
+      where: {
+        estatus: "ACTIVO"
+      },
+      include: [
+        {
+          model: Customer,
+          attributes: ["firstName", "lastName", "numberID"]
+        }
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json(contratos);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error obteniendo contratos activos" });
+  }
+};
+
 module.exports = {
   reporteIngresos,
+  obtenerKpisReportes,
+  obtenerContratosActivos
 };

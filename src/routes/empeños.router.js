@@ -13,7 +13,8 @@ const {
   getEnDeuda,
   crearContratoEmpeno,
   listarContratosEmpeno,
-  updateContratoEmpeno // ✅ AGREGAR ESTE
+  updateContratoEmpeno,
+  obtenerKpisDashboard
 } = require('../controllers/ModuloEmpeños/contratoEmpeno.controller')
 
 const {
@@ -33,6 +34,8 @@ router.get(
   "/contratos-empeno/:contratoId/prendas",
   obtenerPrendasPorContrato
 )
+
+router.get("/kpis", obtenerKpisDashboard);
 
 
 

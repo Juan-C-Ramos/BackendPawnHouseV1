@@ -80,77 +80,115 @@ const generarReciboPagoPDF = async (req, res) => {
       .text("RECIBO DE COBRO", { align: "center" });
 
     doc.moveDown(0.8);
+// =================== DATOS DEL RECIBO ===================
+doc.fontSize(10).font("Helvetica");
 
-    // =================== DATOS DEL RECIBO ===================
-    doc.fontSize(10).font("Helvetica");
+doc.text(`RECIBO N°: ${pago.numeroPago}`);
+doc.text(`FECHA: ${pago.fechaPago.toISOString().split("T")[0]}`);
+console.log("Fecha del pago:", pago.fechaPago);
 
-    doc.text(`RECIBO N°: ${pago.numeroPago}`, { align: "left" });
-    doc.text(`FECHA: ${pago.fechaPago.toISOString().split("T")[0]}`, {
-      align: "left",
-    });
-    console.log("Fecha del pago:", pago.fechaPago);
+doc.moveDown(0.5);
 
-    doc.moveDown(1);
+doc.text(`CLIENTE: ${cliente.firstName} ${cliente.lastName}`);
+doc.text(`METODO: ${pago.metodoPago}`);
 
-    doc.text(`Recibí de: ${cliente.firstName} ${cliente.lastName}`, {
-      align: "left",
-    });
-    doc.moveDown(0.6);
+doc.moveDown(0.5);
 
-    doc.text(`Método de pago: ${pago.metodoPago}`, { align: "left" });
+// =================== SEPARADOR ===================
+doc.fontSize(9);
+doc.text("-----------------------------------------------------------", { align: "center" });
 
-    doc.moveDown(0.4);
-    doc.text("Concepto: Pago de cuota", { align: "left" });
-    doc.moveDown(0.4);
-    doc.text(`Saldo capital Actual: B/. ${Number(pago.montoCapitalAnterior || 0).toFixed(2)}`, { align: "left" });
-    doc.moveDown(0.4);
-    doc.text(`Saldo intereses Actual: B/. ${Number(pago.montoInteresAnterior || 0).toFixed(2)}`, { align: "left" });
-    doc.moveDown(0.4);
-    doc.text(`Saldo morosidad Actual: B/. ${Number(pago.montoMorosidadAnterior || 0).toFixed(2)}`, { align: "left" });
+doc.moveDown(0.3);
 
-    doc.moveDown(0.6);
+doc.text("CONCEPTO: Pago de cuota");
 
-    // =================== DETALLE DE MONTOS ===================
-    doc.text(`Detalles`, {
-      align: "center",
-    });
-    // =================== TOTAL (DESTACADO) ===================
-    doc
-      .fontSize(10)
-      .font("Helvetica-Bold")
-      .text(`TOTAL: B/. ${Number(pago.montoTotalPago).toFixed(2)}`, {
-        align: "left",
-      });
-      doc.fontSize(10).font("Helvetica");
-    doc.text(`Abono a Capital: B/. ${Number(pago.montoCapital).toFixed(2)}`, {
-      align: "left",
-    });
-    doc.text(`Abono a Interés: B/. ${Number(pago.montoInteres).toFixed(2)}`, {
-      align: "left",
-    });
-    doc.text(`Monto Morosidad: B/. ${Number(pago.montoMorosidad).toFixed(2)}`, {
-      align: "left",
-    });
-    doc.text(`ITBMS (7%): B/. ${Number(pago.montoITBMS).toFixed(2)}`, {
-      align: "left",
-    });
+doc.moveDown(0.3);
 
-    doc.moveDown(0.6);
+// =================== SALDOS ANTERIORES ===================
+doc.font("Helvetica-Bold").text("SALDOS ANTERIORES");
+doc.font("Helvetica");
 
-    // =================== SALDO ===================
-    doc.text(`Saldo capital nuevo: B/. ${Number(pago.montoCapitalNuevo || 0).toFixed(2)}`, {
-      align: "left",
-    });
+doc.text(`Capital`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoCapitalAnterior || 0).toFixed(2)}`, {
+  align: "right",
+});
 
-    doc.moveDown(0.4);
-    doc.text(`Saldo intereses nuevo: B/. ${Number(pago.montoInteresNuevo || 0).toFixed(2)}`, {
-      align: "left",
-    });
+doc.text(`Interés`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoInteresAnterior || 0).toFixed(2)}`, {
+  align: "right",
+});
 
-    doc.moveDown(0.4);
-    doc.text(`Saldo morosidad nuevo: B/. ${Number(pago.montoMorosidadNuevo || 0).toFixed(2)}`, {
-      align: "left",
-    });
+doc.text(`Morosidad`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoMorosidadAnterior || 0).toFixed(2)}`, {
+  align: "right",
+});
+
+doc.moveDown(0.5);
+
+// =================== SEPARADOR ===================
+doc.text("-----------------------------------------------------------", { align: "center" });
+
+doc.moveDown(0.4);
+
+// =================== DETALLES DEL PAGO ===================
+doc.font("Helvetica-Bold").text("DETALLE DEL PAGO");
+doc.font("Helvetica");
+
+doc.text(`Abono Capital`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoCapital).toFixed(2)}`, { align: "right" });
+
+doc.text(`Abono Interés`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoInteres).toFixed(2)}`, { align: "right" });
+
+doc.text(`Morosidad`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoMorosidad).toFixed(2)}`, { align: "right" });
+
+doc.text(`ITBMS (7%)`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoITBMS).toFixed(2)}`, { align: "right" });
+
+doc.moveDown(0.5);
+
+// =================== SEPARADOR ===================
+doc.text("-----------------------------------------------------------", { align: "center" });
+
+doc.moveDown(0.4);
+
+// =================== TOTAL ===================
+doc
+  .fontSize(11)
+  .font("Helvetica-Bold")
+  .text(`TOTAL PAGADO`, 10, doc.y, { continued: true });
+
+doc.text(`B/. ${Number(pago.montoTotalPago).toFixed(2)}`, {
+  align: "right",
+});
+
+doc.moveDown(0.6);
+
+// =================== SEPARADOR ===================
+doc.fontSize(9).font("Helvetica");
+doc.text("-----------------------------------------------------------", { align: "center" });
+
+doc.moveDown(0.4);
+
+// =================== SALDOS NUEVOS ===================
+doc.font("Helvetica-Bold").text("SALDOS ACTUALES");
+doc.font("Helvetica");
+
+doc.text(`Capital`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoCapitalNuevo || 0).toFixed(2)}`, {
+  align: "right",
+});
+
+doc.text(`Interés`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoInteresNuevo || 0).toFixed(2)}`, {
+  align: "right",
+});
+
+doc.text(`Morosidad`, 10, doc.y, { continued: true });
+doc.text(`B/. ${Number(pago.montoMorosidadNuevo || 0).toFixed(2)}`, {
+  align: "right",
+});
 
     doc.moveDown(0.4);
 
@@ -166,7 +204,7 @@ const generarReciboPagoPDF = async (req, res) => {
     doc.moveDown(0.3);
     doc.fontSize(8).font("Helvetica");
     doc.text("RECIBIDO POR", { align: "center" });
-    // doc.text(`${usuario.firstName} ${usuario.lastName}`, { align: "center" });
+    doc.text(`${usuario.firstName} ${usuario.lastName}`, { align: "center" });
 
     doc.end();
   } catch (error) {
