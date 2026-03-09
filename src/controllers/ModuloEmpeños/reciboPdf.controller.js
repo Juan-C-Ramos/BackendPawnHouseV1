@@ -1,7 +1,7 @@
 // controllers/reciboPagoPdf.controller.js
 const PDFDocument = require("pdfkit");
 const path = require("path");
-const { Pagos, ContratoEmpeno, Customer } = require("../../models"); // ajusta tu ruta
+const { Pagos, ContratoEmpeno, Customer, User } = require("../../models"); // ajusta tu ruta
 
 const generarReciboPagoPDF = async (req, res) => {
   try {
@@ -15,8 +15,16 @@ const generarReciboPagoPDF = async (req, res) => {
           model: ContratoEmpeno,
           include: [{ model: Customer } ],
         },
+        {
+          model: User,
+        },
       ],
     });
+
+    const usuario = await User.findByPk(pago.userId);
+
+    console.log("Pago encontrado:", pago ? pago.toJSON() : "No se encontró el pago");
+    console.log("Usuario encontrado:", usuario ? usuario.toJSON() : "No se encontró el usuario");
 
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
@@ -158,7 +166,7 @@ const generarReciboPagoPDF = async (req, res) => {
     doc.moveDown(0.3);
     doc.fontSize(8).font("Helvetica");
     doc.text("RECIBIDO POR", { align: "center" });
-    doc.text("Israel Rodríguez", { align: "center" });
+    // doc.text(`${usuario.firstName} ${usuario.lastName}`, { align: "center" });
 
     doc.end();
   } catch (error) {
