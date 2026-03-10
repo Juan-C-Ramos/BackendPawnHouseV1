@@ -260,9 +260,20 @@ await nuevoPago.update(
     contrato.interesAdeudado = interesNuevo;
     contrato.morosidadAdeudada = morosidadNuevo;
 
-    contrato.totalPagadoCapital += pagoCapital;
-    contrato.totalPagadoInteres += pagoInteres;
-    contrato.totalPagadoMorosidad += pagoMorosidad;
+    contrato.totalPagadoCapital =
+  Number(
+    Number(contrato.totalPagadoCapital || 0) + Number(pagoCapital)
+  ).toFixed(2);
+
+contrato.totalPagadoInteres =
+  Number(
+    Number(contrato.totalPagadoInteres || 0) + Number(pagoInteres)
+  ).toFixed(2);
+
+contrato.totalPagadoMorosidad =
+  Number(
+    Number(contrato.totalPagadoMorosidad || 0) + Number(pagoMorosidad)
+  ).toFixed(2);
 
     if (pagoInteres > 0) {
       contrato.ultimaFechaPagoInteres = hoy;
