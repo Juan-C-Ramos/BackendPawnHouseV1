@@ -218,6 +218,9 @@ exports.getEnDeuda = async (req, res) => {
 
     const contratos = await ContratoEmpeno.findAll({
       where: {
+        capitalAdeudado: {
+          [Op.gt]: 0
+        },
         estatus: "ACTIVO",
         nuevaFechaCorte: {
           [Op.lt]: hoy,
@@ -466,6 +469,9 @@ hoy.setHours(0,0,0,0);
 
 const enDeuda = await ContratoEmpeno.count({
   where: {
+    capitalAdeudado: {
+          [Op.gt]: 0
+        },
     estatus: "ACTIVO",
     [Op.or]: [
       { morosidadAdeudada: { [Op.gt]: 0 } },

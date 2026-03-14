@@ -127,6 +127,9 @@ const obtenerKpisReportes = async (req, res) => {
 
     const contratosVencidos = await ContratoEmpeno.count({
       where: {
+        capitalAdeudado: {
+          [Op.gt]: 0
+        },
         nuevaFechaCorte: {
           [Op.lt]: hoy
         },
@@ -178,8 +181,74 @@ const obtenerContratosActivos = async (req, res) => {
   }
 };
 
+
+const obtenerContratosEnDeuda = async (req, res) => {
+  try {
+
+    const hoy = new Date();
+
+    const contratos = await ContratoEmpeno.findAll({
+      where: {
+        capitalAdeudado: {
+          [Op.gt]: 0
+        },
+        nuevaFechaCorte: {
+          [Op.gte]: hoy
+        }
+      },
+      include: [
+        {
+          model: Customer,
+          attributes: ["firstName", "lastName"]
+        }
+      ],
+      order: [["nuevaFechaCorte", "ASC"]]
+    });
+
+    res.json(contratos);
+
+  } catch (error) {
+    console.error("Error obteniendo contratos en deuda:", error);
+    res.status(500).json({ error: "Error obteniendo contratos en deuda" });
+  }
+};
+
+const obtenerContratosVencidos = async (req, res) => {
+  try {
+
+    const hoy = new Date();
+
+    const contratos = await ContratoEmpeno.findAll({
+      where: {
+        capitalAdeudado: {
+          [Op.gt]: 0
+        },
+        nuevaFechaCorte: {
+          [Op.lte]: hoy
+        },
+        estatus: "ACTIVO"
+      },
+      include: [
+        {
+          model: Customer,
+          attributes: ["firstName", "lastName"]
+        }
+      ],
+      order: [["nuevaFechaCorte", "ASC"]]
+    });
+
+    res.json(contratos);
+
+  } catch (error) {
+    console.error("Error obteniendo contratos vencidos:", error);
+    res.status(500).json({ error: "Error obteniendo contratos vencidos" });
+  }
+};
+
 module.exports = {
   reporteIngresos,
   obtenerKpisReportes,
-  obtenerContratosActivos
+  obtenerContratosActivos,
+  obtenerContratosEnDeuda,
+  obtenerContratosVencidos
 };

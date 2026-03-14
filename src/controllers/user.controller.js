@@ -76,10 +76,7 @@ const login = catchError(async (req, res) => { //! -> /users/login
     
   const { userName, password, dispositivo, locationLat, locationLong } = req.body
 
-  console.log(req.body)
-
-  console.log(userName, password);
-
+  
   const user = await User.findOne({ where: { userName } })
   if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
