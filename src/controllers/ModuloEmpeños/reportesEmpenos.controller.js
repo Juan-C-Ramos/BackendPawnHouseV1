@@ -3,7 +3,7 @@
 // GET /empenos/reportes/vencidos
 // GET /empenos/reportes/resumen-kpi
 
-const { Op } = require("sequelize");
+const { Op, fn, col, literal } = require("sequelize");
 const {
   Pagos,
   ContratoEmpeno,
@@ -386,11 +386,184 @@ const reporteLiquidacionPrendas = async (req, res) => {
   }
 };
 
+const obtenerIngresosAnuales = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    console.log("Generando reporte de ingresos para el año:", year);
+
+    const inicio = new Date(`${year}-01-01`);
+    const fin = new Date(`${year}-12-31`);
+
+    // =========================
+    // 1. CAPITAL PRESTADO
+    // =========================
+    const prestamos = await ContratoEmpeno.findAll({
+      attributes: [
+        [literal('EXTRACT(MONTH FROM "fechaContrato")'), "mes"],
+        [fn("SUM", col("montoPrestamo")), "capitalPrestado"]
+      ],
+      where: {
+        fechaContrato: { [Op.between]: [inicio, fin] }
+      },
+      group: [literal('EXTRACT(MONTH FROM "fechaContrato")')],
+      raw: true
+    });
+
+    // =========================
+    // 2. PAGOS
+    // =========================
+    const pagos = await Pagos.findAll({
+      attributes: [
+        [literal('EXTRACT(MONTH FROM "fechaPago")'), "mes"],
+        [fn("SUM", col("montoInteres")), "intereses"],
+        [fn("SUM", col("montoCapital")), "capitalRecuperado"]
+      ],
+      where: {
+        fechaPago: { [Op.between]: [inicio, fin] }
+      },
+      group: [literal('EXTRACT(MONTH FROM "fechaPago")')],
+      raw: true
+    });
+
+    // =========================
+    // 3. ARMAR MESES
+    // =========================
+    const meses = [
+      "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+      "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+    ];
+
+    const resultado = meses.map((nombre, index) => {
+      const mesNum = index + 1;
+
+      const prestamoMes = prestamos.find(p => Number(p.mes) === mesNum) || {};
+      const pagoMes = pagos.find(p => Number(p.mes) === mesNum) || {};
+
+      return {
+        mes: nombre,
+        capitalPrestado: Number(prestamoMes.capitalPrestado) || 0,
+        intereses: Number(pagoMes.intereses) || 0,
+        capitalRecuperado: Number(pagoMes.capitalRecuperado) || 0,
+        capitalAdeudado: 0
+      };
+    });
+
+    // =========================
+    // 4. ADEUDADO ACUMULADO
+    // =========================
+    let acumuladoPrestado = 0;
+    let acumuladoRecuperado = 0;
+
+    resultado.forEach((mes) => {
+      acumuladoPrestado += mes.capitalPrestado;
+      acumuladoRecuperado += mes.capitalRecuperado;
+
+      mes.capitalAdeudado = acumuladoPrestado - acumuladoRecuperado;
+    });
+
+    res.json(resultado);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al generar reporte" });
+  }
+};
+
+
+const obtenerIngresosPorMes = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year);
+    const mes = parseInt(req.query.mes); // 1 - 12
+
+    if (!year || !mes) {
+      return res.status(400).json({ message: "year y mes son requeridos" });
+    }
+
+    // =========================
+    // RANGO DE FECHAS
+    // =========================
+    const inicio = new Date(year, mes - 1, 1);
+    const fin = new Date(year, mes, 0, 23, 59, 59); // último día del mes
+
+    // =========================
+    // 1. PRESTAMOS
+    // =========================
+    const prestamos = await ContratoEmpeno.findAll({
+      attributes: [
+        [literal('EXTRACT(DAY FROM "fechaContrato")'), "dia"],
+        [fn("SUM", col("montoPrestamo")), "capitalPrestado"]
+      ],
+      where: {
+        fechaContrato: { [Op.between]: [inicio, fin] }
+      },
+      group: [literal('EXTRACT(DAY FROM "fechaContrato")')],
+      raw: true
+    });
+
+    // =========================
+    // 2. PAGOS
+    // =========================
+    const pagos = await Pagos.findAll({
+      attributes: [
+        [literal('EXTRACT(DAY FROM "fechaPago")'), "dia"],
+        [fn("SUM", col("montoInteres")), "intereses"],
+        [fn("SUM", col("montoCapital")), "capitalRecuperado"]
+      ],
+      where: {
+        fechaPago: { [Op.between]: [inicio, fin] }
+      },
+      group: [literal('EXTRACT(DAY FROM "fechaPago")')],
+      raw: true
+    });
+
+    // =========================
+    // 3. GENERAR DÍAS DEL MES
+    // =========================
+    const diasEnMes = new Date(year, mes, 0).getDate();
+
+    const resultado = [];
+
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+      const prestamoDia = prestamos.find(p => Number(p.dia) === dia) || {};
+      const pagoDia = pagos.find(p => Number(p.dia) === dia) || {};
+
+      resultado.push({
+        dia,
+        capitalPrestado: Number(prestamoDia.capitalPrestado) || 0,
+        intereses: Number(pagoDia.intereses) || 0,
+        capitalRecuperado: Number(pagoDia.capitalRecuperado) || 0,
+        capitalAdeudado: 0
+      });
+    }
+
+    // =========================
+    // 4. ADEUDADO ACUMULADO
+    // =========================
+    let acumuladoPrestado = 0;
+    let acumuladoRecuperado = 0;
+
+    resultado.forEach((d) => {
+      acumuladoPrestado += d.capitalPrestado;
+      acumuladoRecuperado += d.capitalRecuperado;
+
+      d.capitalAdeudado = acumuladoPrestado - acumuladoRecuperado;
+    });
+
+    res.json(resultado);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al generar reporte mensual" });
+  }
+};
+
 module.exports = {
   reporteIngresos,
   obtenerKpisReportes,
   obtenerContratosActivos,
   obtenerContratosEnDeuda,
   obtenerContratosVencidos,
-  reporteLiquidacionPrendas
+  reporteLiquidacionPrendas,
+  obtenerIngresosAnuales,
+  obtenerIngresosPorMes
 };
