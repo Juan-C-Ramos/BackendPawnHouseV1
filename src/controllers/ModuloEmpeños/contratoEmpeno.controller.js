@@ -6,7 +6,6 @@ const {
   User,
 } = require("../../models");
 const sequelize = require("../../utils/connection");
-
 // const generarNumeroContratoEmpeno = require("../../utils/generarNumeroContratoEmpeno");
 const PagosEmpeños = require("../../models/ModuloEmpeños/Pagos");
 
@@ -341,26 +340,26 @@ exports.updateContratoEmpeno = async (req, res) => {
 const contratoUpdate = {
   ...contrato,
 
-  customerId: toNumberOrNull(contrato.customerId),
+  customerId: toNumberOrNull(contrato.customerId) || contratoDb.customerId,
 
-  montoPrestamo: toNumberOrNull(contrato.montoPrestamo),
-  montoMaximoaPrestar: toNumberOrNull(contrato.montoMaximoaPrestar),
-  tasaInteres: toNumberOrNull(contrato.tasaInteres),
-  interesMensualEfectivo: toNumberOrNull(contrato.interesMensualEfectivo),
+  montoPrestamo: toNumberOrNull(contrato.montoPrestamo)    || contratoDb.montoPrestamo,
+  montoMaximoaPrestar: toNumberOrNull(contrato.montoMaximoaPrestar) || contratoDb.montoMaximoaPrestar,
+  tasaInteres: toNumberOrNull(contrato.tasaInteres) || contratoDb.tasaInteres,
+  interesMensualEfectivo: toNumberOrNull(contrato.interesMensualEfectivo) || contratoDb.interesMensualEfectivo,
 
-  plazoMeses: toNumberOrNull(contrato.plazoMeses),
-  periodoGraciaDias: toNumberOrNull(contrato.periodoGraciaDias),
+  plazoMeses: toNumberOrNull(contrato.plazoMeses) || contratoDb.plazoMeses,
+  periodoGraciaDias: toNumberOrNull(contrato.periodoGraciaDias) || contratoDb.periodoGraciaDias,
 
-  capitalTotal: toNumberOrNull(contrato.capitalTotal),
-  capitalAdeudado: toNumberOrNull(contrato.capitalAdeudado),
-  totalPagadoCapital: toNumberOrNull(contrato.totalPagadoCapital),
+  capitalTotal: toNumberOrNull(contrato.capitalTotal) || contratoDb.capitalTotal,
+  capitalAdeudado: toNumberOrNull(contrato.capitalAdeudado) || contratoDb.capitalAdeudado,
+  totalPagadoCapital: toNumberOrNull(contrato.totalPagadoCapital) || contratoDb.totalPagadoCapital,
 
-  interesAdeudado: toNumberOrNull(contrato.interesAdeudado),
-  totalPagadoInteres: toNumberOrNull(contrato.totalPagadoInteres),
+  interesAdeudado: toNumberOrNull(contrato.interesAdeudado) || contratoDb.interesAdeudado,
+  totalPagadoInteres: toNumberOrNull(contrato.totalPagadoInteres) || contratoDb.totalPagadoInteres,
 
-  morosidadAdeudada: toNumberOrNull(contrato.morosidadAdeudada),
-  totalPagadoMorosidad: toNumberOrNull(contrato.totalPagadoMorosidad),
-  morosidadTotal: toNumberOrNull(contrato.morosidadTotal),
+  morosidadAdeudada: toNumberOrNull(contrato.morosidadAdeudada) || contratoDb.morosidadAdeudada,
+  totalPagadoMorosidad: toNumberOrNull(contrato.totalPagadoMorosidad) || contratoDb.totalPagadoMorosidad,
+  morosidadTotal: toNumberOrNull(contrato.morosidadTotal) || contratoDb.morosidadTotal,
 };
 
 // actualizar contrato
@@ -495,4 +494,115 @@ const enDeuda = await ContratoEmpeno.count({
     });
 
   }
+};
+
+
+
+exports.liquidarContratoEmpeno = async (req, res) => {
+
+  const t = await sequelize.transaction();
+
+  try {
+
+    const { id } = req.params;
+
+    const contrato = await ContratoEmpeno.findByPk(id, {
+      include: [PrendaEmpeno],
+      transaction: t
+    });
+
+    if (!contrato) {
+      await t.rollback();
+      return res.status(404).json({
+        error: "Contrato no encontrado"
+      });
+    }
+
+    if (contrato.estatus === "PERDIDO") {
+      await t.rollback();
+      return res.status(400).json({
+        error: "El contrato ya está liquidado"
+      });
+    }
+
+    const hoy = new Date();
+
+    // ================================
+    // CALCULAR MESES ATRASADOS
+    // ================================
+
+    let mesesAtrasados = 0;
+
+    const ultimaFecha =
+      contrato.ultimaFechaPagoInteres
+        ? new Date(contrato.ultimaFechaPagoInteres)
+        : new Date(contrato.fechaContrato);
+
+    mesesAtrasados =
+      (hoy.getFullYear() - ultimaFecha.getFullYear()) * 12 +
+      (hoy.getMonth() - ultimaFecha.getMonth());
+
+    if (hoy.getDate() < ultimaFecha.getDate()) {
+      mesesAtrasados--;
+    }
+
+    if (mesesAtrasados < 0) mesesAtrasados = 0;
+
+    // ================================
+    // CALCULAR INTERÉS ATRASADO
+    // ================================
+
+    const capitalBase = Number(contrato.capitalAdeudado || 0);
+    const tasa = Number(contrato.tasaInteres || 0);
+
+    const interesMensual = capitalBase * (tasa / 100);
+
+    const interesAtrasado = interesMensual * mesesAtrasados;
+
+    const interesTotal =
+      Number(contrato.interesAdeudado || 0) +
+      interesAtrasado;
+
+    // ================================
+    // ACTUALIZAR CONTRATO
+    // ================================
+
+    contrato.interesAdeudado = interesTotal;
+    contrato.estatus = "PERDIDO";
+
+    await contrato.save({ transaction: t });
+
+    // ================================
+    // ACTUALIZAR PRENDAS
+    // ================================
+
+    for (const prenda of contrato.prendaEmpenos) {
+
+      prenda.status = "DISPONIBLE_VENTA";
+
+      await prenda.save({ transaction: t });
+
+    }
+
+    await t.commit();
+
+    return res.json({
+      message: "Contrato liquidado correctamente",
+      contratoId: contrato.id,
+      interesGenerado: interesAtrasado,
+      interesTotalContrato: interesTotal
+    });
+
+  } catch (error) {
+
+    await t.rollback();
+
+    console.error("Error liquidando contrato:", error);
+
+    return res.status(500).json({
+      error: "Error al liquidar contrato"
+    });
+
+  }
+
 };

@@ -14,13 +14,16 @@ const {
   crearContratoEmpeno,
   listarContratosEmpeno,
   updateContratoEmpeno,
-  obtenerKpisDashboard
+  obtenerKpisDashboard,
+  liquidarContratoEmpeno
+
 } = require('../controllers/ModuloEmpeños/contratoEmpeno.controller')
 
 const {
   obtenerPrendasPorContrato,
 } = require("../controllers/ModuloEmpeños/prendaEmpeno.controller")
 
+const {registrarVenta, getPrendasDisponibles} = require("../controllers/ModuloEmpeños/ventas.controller")
 
 
 /*
@@ -34,6 +37,9 @@ router.get(
   "/contratos-empeno/:contratoId/prendas",
   obtenerPrendasPorContrato
 )
+
+router.post("/ventas", registrarVenta);
+router.get("/ventas/prendas-disponibles", getPrendasDisponibles);
 
 router.get("/kpis", obtenerKpisDashboard);
 
@@ -116,6 +122,14 @@ router.get(
   '/dashboard/en-deuda',
   getEnDeuda
 )
+
+
+router.put(
+  "/contratos/:id/liquidar",
+  liquidarContratoEmpeno
+);
+
+
 
 
 

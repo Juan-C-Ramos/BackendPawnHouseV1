@@ -20,6 +20,7 @@ const LoginRegister = require("./LoginRegister.js")
 const ContratoEmpeno = require('./ModuloEmpeños/ContratoEmpeño')
 const PrendaEmpeno = require('./ModuloEmpeños/PrendaEmpeño')
 const Pagos = require('./ModuloEmpeños/Pagos')
+const Venta = require("./ModuloEmpeños/Venta.js")
 
 
 //Users -> Customer);
@@ -160,6 +161,24 @@ Pagos.belongsTo(User, {
   foreignKey: 'userId'
 })
 
+// Ventas -> ContratoEmpeño
+
+Venta.belongsTo(ContratoEmpeno, {
+  foreignKey: "contratoEmpenoId"
+});
+
+ContratoEmpeno.hasOne(Venta, {
+  foreignKey: "contratoEmpenoId"
+});
+
+Venta.belongsTo(PrendaEmpeno, {
+  foreignKey: "prendaEmpenoId"
+});
+
+PrendaEmpeno.hasMany(Venta, {
+  foreignKey: "prendaEmpenoId"
+});
+
 
 module.exports = {
   // modelos existentes
@@ -183,5 +202,6 @@ module.exports = {
   // 🔥 módulo de empeños
   ContratoEmpeno,
   PrendaEmpeno,
-  Pagos
+  Pagos,
+  Venta
 }

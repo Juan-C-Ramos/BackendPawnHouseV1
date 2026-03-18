@@ -9,6 +9,9 @@ const {
   ContratoEmpeno,
   Customer,
   User,
+  Venta,
+  PrendaEmpeno
+
 } = require("../../models");
 
 const reporteIngresos = async (req, res) => {
@@ -245,10 +248,149 @@ const obtenerContratosVencidos = async (req, res) => {
   }
 };
 
+
+
+
+const reporteLiquidacionPrendas = async (req, res) => {
+
+  try {
+
+    const { desde, hasta } = req.query;
+
+    // =========================
+    // VALIDACIONES
+    // =========================
+
+    if (!desde || !hasta) {
+      return res.status(400).json({
+        error: "Debe enviar las fechas 'desde' y 'hasta'"
+      });
+    }
+
+    const fechaDesde = new Date(desde);
+    const fechaHasta = new Date(hasta);
+
+    if (isNaN(fechaDesde) || isNaN(fechaHasta)) {
+      return res.status(400).json({
+        error: "Formato de fecha inválido"
+      });
+    }
+
+    if (fechaDesde > fechaHasta) {
+      return res.status(400).json({
+        error: "La fecha 'desde' no puede ser mayor que 'hasta'"
+      });
+    }
+
+    // =========================
+    // CONSULTA
+    // =========================
+
+    const ventas = await Venta.findAll({
+
+      where: {
+        fechaVenta: {
+          [Op.between]: [desde, hasta]
+        }
+      },
+
+      include: [
+        {
+          model: ContratoEmpeno,
+          attributes: [
+            "id",
+            "numeroContrato",
+            "fechaContrato",
+            "montoPrestamo",
+            "montoMaximoaPrestar",
+            "interesAdeudado"
+          ]
+        },
+        {
+          model: PrendaEmpeno,
+          attributes: [
+            "id",
+            "descripcion"
+          ]
+        }
+      ],
+
+      order: [["fechaVenta", "ASC"]]
+
+    });
+
+    // =========================
+    // MAPEO PARA EL REPORTE
+    // =========================
+
+    const reporte = ventas.map(v => {
+
+      const contrato = v.contratoEmpeno;
+      const prenda = v.prendaEmpeno;
+
+      if (!contrato || !prenda) {
+        return null;
+      }
+
+      const montoPrestado = Number(contrato.montoPrestamo) || 0;
+      const montoMaximo = Number(contrato.montoMaximoaPrestar) || 0;
+      const intereses = Number(contrato.interesAdeudado) || 0;
+      const precioVenta = Number(v.precioVenta) || 0;
+
+      const saldoCliente =
+        precioVenta - (montoPrestado + intereses);
+
+      return {
+
+        numeroContrato: contrato.numeroContrato,
+
+        fechaContrato: contrato.fechaContrato,
+
+        articulo: prenda.descripcion,
+
+        montoMaximo: montoMaximo,
+
+        montoPrestado: montoPrestado,
+
+        interesesAdeudados: intereses,
+
+        valorVenta: precioVenta,
+
+        saldoCliente: saldoCliente > 0
+          ? Number(saldoCliente.toFixed(2))
+          : 0
+
+      };
+
+    }).filter(Boolean);
+
+    // =========================
+    // RESPUESTA
+    // =========================
+
+    return res.json({
+      totalRegistros: reporte.length,
+      desde,
+      hasta,
+      data: reporte
+    });
+
+  } catch (error) {
+
+    console.error("Error reporte MISI:", error);
+
+    return res.status(500).json({
+      error: "Error generando el reporte de liquidación de prendas"
+    });
+
+  }
+};
+
 module.exports = {
   reporteIngresos,
   obtenerKpisReportes,
   obtenerContratosActivos,
   obtenerContratosEnDeuda,
-  obtenerContratosVencidos
+  obtenerContratosVencidos,
+  reporteLiquidacionPrendas
 };
