@@ -63,8 +63,8 @@ exports.registrarPagoEmpeno = async (req, res) => {
 
     let mesesAtrasados = 0;
 
-    if (contrato.ultimaFechaPagoInteres) {
-      const ultima = new Date(contrato.ultimaFechaPagoInteres);
+    if (contrato.anteriorFechaCorte) {
+      const ultima = new Date(contrato.anteriorFechaCorte);
 
       mesesAtrasados =
         (hoy.getFullYear() - ultima.getFullYear()) * 12 +
@@ -276,8 +276,29 @@ contrato.totalPagadoMorosidad =
   ).toFixed(2);
 
     if (pagoInteres > 0) {
-      contrato.ultimaFechaPagoInteres = hoy;
-    }
+  contrato.ultimaFechaPagoInteres = hoy;
+
+  // Guardar anterior
+  contrato.anteriorFechaCorte = contrato.nuevaFechaCorte || hoy;
+
+  const fechaContrato = new Date(contrato.fechaContrato);
+  const diaOriginal = fechaContrato.getDate();
+
+  // Base: hoy + 1 mes
+  const nuevaFecha = new Date(hoy);
+  nuevaFecha.setMonth(nuevaFecha.getMonth() + 1);
+
+  // Ajustar al día original
+  const ultimoDiaDelMes = new Date(
+    nuevaFecha.getFullYear(),
+    nuevaFecha.getMonth() + 1,
+    0
+  ).getDate();
+
+  nuevaFecha.setDate(Math.min(diaOriginal, ultimoDiaDelMes));
+
+  contrato.nuevaFechaCorte = nuevaFecha;
+}
 
     // ================================
 // CERRAR CONTRATO SI CAPITAL ES 0
