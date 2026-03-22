@@ -13,6 +13,7 @@ const {
   PrendaEmpeno
 
 } = require("../../models");
+const sequelize = require("../../utils/connection");
 
 const reporteIngresos = async (req, res) => {
   try {
@@ -557,6 +558,41 @@ const obtenerIngresosPorMes = async (req, res) => {
   }
 };
 
+// GET /reportes-empenos/misi/reporte-anual?anio=2025
+
+const reporteAnualMICI = async (req, res) => {
+  try {
+    const { anio } = req.query;
+
+    const desde = `${anio}-01-01`;
+    const hasta = `${anio}-12-31`;
+
+    const resultado = await sequelize.query(`
+      SELECT
+        p.categoria,
+        COUNT(p.id) AS cantidad_prendas,
+        SUM(p."valorEstimado") AS valor_total
+      FROM "prendaEmpenos" p
+      JOIN "contratoEmpenos" ce 
+        ON p."contratoEmpenoId" = ce.id
+      WHERE ce."fechaContrato" BETWEEN :desde AND :hasta
+      GROUP BY p.categoria
+      ORDER BY p.categoria
+    `, {
+      replacements: { desde, hasta },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    res.json({data: resultado, anio});
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      msg: "Error generando reporte MICI"
+    });
+  }
+};
+
 module.exports = {
   reporteIngresos,
   obtenerKpisReportes,
@@ -565,5 +601,6 @@ module.exports = {
   obtenerContratosVencidos,
   reporteLiquidacionPrendas,
   obtenerIngresosAnuales,
-  obtenerIngresosPorMes
+  obtenerIngresosPorMes,
+  reporteAnualMICI
 };
