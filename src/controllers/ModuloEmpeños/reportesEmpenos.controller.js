@@ -562,10 +562,8 @@ const obtenerIngresosPorMes = async (req, res) => {
 
 const reporteAnualMICI = async (req, res) => {
   try {
-    const { anio } = req.query;
+    const { desde, hasta } = req.query;
 
-    const desde = `${anio}-01-01`;
-    const hasta = `${anio}-12-31`;
 
     const resultado = await sequelize.query(`
       SELECT
@@ -583,7 +581,7 @@ const reporteAnualMICI = async (req, res) => {
       type: sequelize.QueryTypes.SELECT
     });
 
-    res.json({data: resultado, anio});
+    res.json({data: resultado});
 
   } catch (error) {
     console.error(error);
