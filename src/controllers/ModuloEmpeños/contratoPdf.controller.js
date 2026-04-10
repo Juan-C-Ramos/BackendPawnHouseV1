@@ -72,12 +72,13 @@ const generarContratoEmpenoPDF = async (req, res) => {
       doc.text(contrato?.numeroContrato || "N/A", 455, 40);
       doc.text("Fecha:", 455, 55);
       const fecha = contrato?.fechaContrato
-  ? new Date(contrato.fechaContrato)
-      .toLocaleDateString("es-PA", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
+  ? (() => {
+      const d = new Date(contrato.fechaContrato);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}/${month}/${day}`;
+    })()
   : "N/A";
 
 doc.text(fecha, 500, 55);
