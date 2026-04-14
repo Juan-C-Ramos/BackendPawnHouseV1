@@ -52,7 +52,6 @@ const remove = catchError(async (req, res) => {
   return res.sendStatus(204);
 });
 
-const bcrypt = require("bcrypt");
 
 const update = catchError(async (req, res) => {
   const { id } = req.params;
