@@ -52,19 +52,28 @@ const remove = catchError(async (req, res) => {
   return res.sendStatus(204);
 });
 
+const bcrypt = require("bcrypt");
+
 const update = catchError(async (req, res) => {
   const { id } = req.params;
 
-  delete req.body.email
+  // Evitar que cambien el email
+  delete req.body.email;
+
+  // 🔐 Si viene password, la encriptamos
+  if (req.body.password) {
+    req.body.password = await bcrypt.hash(req.body.password, 10);
+  }
 
   const result = await User.update(
     req.body,
     { where: { id }, returning: true }
   );
+
   if (result[0] === 0) return res.sendStatus(404);
+
   return res.json(result[1][0]);
 });
-
 const login = catchError(async (req, res) => { //! -> /users/login
 
 
