@@ -275,7 +275,7 @@ contrato.totalPagadoMorosidad =
     Number(contrato.totalPagadoMorosidad || 0) + Number(pagoMorosidad)
   ).toFixed(2);
 
-    if (pagoInteres > 0) {
+    if (pagoInteres) {
   contrato.ultimaFechaPagoInteres = hoy;
 
   // Guardar anterior
