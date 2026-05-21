@@ -29,6 +29,7 @@ exports.registrarPagoEmpeno = async (req, res) => {
       descontarITBMS,
       liquidarContrato,
       forzarInteres,
+      
 
       // preview del front (para validar)
       montoMorosidad: frontMorosidad,
@@ -60,44 +61,90 @@ exports.registrarPagoEmpeno = async (req, res) => {
     // ================================
     // 1️⃣ CALCULAR MESES (IGUAL QUE FRONT)
     // ================================
+const capitalBase = Number(
+  contrato.capitalAdeudado || 0
+);
 
-    let mesesAtrasados = 0;
+const tasa = Number(
+  contrato.tasaInteres || 0
+);
 
-    if (contrato.anteriorFechaCorte) {
-      const ultima = new Date(contrato.anteriorFechaCorte);
+const morosidadAdeudada = Number(
+  contrato.morosidadAdeudada || 0
+);
 
-      mesesAtrasados =
-        (hoy.getFullYear() - ultima.getFullYear()) * 12 +
-        (hoy.getMonth() - ultima.getMonth());
+const interesMensual =
+  capitalBase * (tasa / 100);
 
-      if (mesesAtrasados < 0) mesesAtrasados = 0;
-    }
+const fechaInicio = new Date(
+  contrato.anteriorFechaCorte
+);
 
-    // ================================
-    // 2️⃣ CALCULAR INTERÉS IGUAL QUE FRONT
-    // ================================
+const fechaFin = new Date(
+  contrato.nuevaFechaCorte
+);
 
-    const capitalBase = Number(contrato.capitalAdeudado || 0);
-    const tasa = Number(contrato.tasaInteres || 0);
-    const morosidadAdeudada = Number(contrato.morosidadAdeudada || 0);
+fechaFin.setHours(23, 59, 59, 999);
 
-    const interesMensual = capitalBase * (tasa / 100);
+let interesAdeudadoCalculado = Number(
+  contrato.interesAdeudado || 0
+);
 
-    let interesAdeudadoCalculado =
-      interesMensual * mesesAtrasados +
-      Number(contrato.interesAdeudado || 0);
+// ======================================
+// CASO 1
+// DENTRO DEL PERÍODO
+// ======================================
 
-    if (liquidarContrato)
-      interesAdeudadoCalculado = Math.max(
-        interesAdeudadoCalculado,
-        interesMensual
-      );
+const estaDentroDelPeriodo =
+  hoy >= fechaInicio &&
+  hoy <= fechaFin;
 
-    if (forzarInteres)
-      interesAdeudadoCalculado = Math.max(
-        interesAdeudadoCalculado,
-        interesMensual
-      );
+if (estaDentroDelPeriodo) {
+
+  interesAdeudadoCalculado +=
+    interesMensual;
+
+}
+
+// ======================================
+// CASO 2
+// PERÍODO VENCIDO
+// ======================================
+
+if (hoy > fechaFin) {
+
+  let mesesAtrasados =
+    (hoy.getFullYear() - fechaFin.getFullYear()) * 12 +
+    (hoy.getMonth() - fechaFin.getMonth());
+
+  if (hoy.getDate() > fechaFin.getDate()) {
+    mesesAtrasados += 1;
+  }
+
+  if (mesesAtrasados < 1) {
+    mesesAtrasados = 1;
+  }
+
+  interesAdeudadoCalculado +=
+    interesMensual * mesesAtrasados;
+}
+
+
+// Forzar interés en liquidación
+if (liquidarContrato) {
+  interesAdeudadoCalculado = Math.max(
+    interesAdeudadoCalculado,
+    interesMensual
+  );
+}
+
+// Forzar interés manual
+if (forzarInteres) {
+  interesAdeudadoCalculado = Math.max(
+    interesAdeudadoCalculado,
+    interesMensual
+  );
+}
 
     let saldo = Number(montoTotalRecibido);
 
@@ -106,7 +153,9 @@ exports.registrarPagoEmpeno = async (req, res) => {
     // ================================
 
     const pagoMorosidad = Math.min(saldo, morosidadAdeudada);
+    saldo = Number(saldo.toFixed(2));
     saldo -= pagoMorosidad;
+    saldo = Number(saldo.toFixed(2));
 
     // ================================
     // 4️⃣ INTERÉS (MISMA LÓGICA EXACTA)
@@ -117,18 +166,30 @@ exports.registrarPagoEmpeno = async (req, res) => {
     let pagoInteresBruto = 0;
 
     if (aplicaITBMS && descontarITBMS) {
-      const interesNetoPosible = saldo / 1.07;
 
-      pagoInteres = Math.min(
-        interesNetoPosible,
-        interesAdeudadoCalculado
-      );
+  const interesNetoPosible =
+    Number((saldo / 1.07).toFixed(2));
 
-      pagoInteresBruto = pagoInteres * 1.07;
-      itbms = pagoInteresBruto - pagoInteres;
+  pagoInteres = Math.min(
+    interesNetoPosible,
+    interesAdeudadoCalculado
+  );
 
-      saldo -= pagoInteresBruto;
-    } else {
+  pagoInteres =
+    Number(pagoInteres.toFixed(2));
+
+  pagoInteresBruto =
+    Number((pagoInteres * 1.07).toFixed(2));
+
+  itbms =
+    Number((pagoInteresBruto - pagoInteres).toFixed(2));
+
+  saldo -= pagoInteresBruto;
+
+  saldo =
+    Number(saldo.toFixed(2));
+}
+    else {
       pagoInteresBruto = Math.min(
         saldo,
         interesAdeudadoCalculado
@@ -138,14 +199,18 @@ exports.registrarPagoEmpeno = async (req, res) => {
 
       if (aplicaITBMS) {
         itbms = pagoInteres * 0.07;
+        itbms = Number(itbms.toFixed(2));
       }
 
-      saldo -= pagoInteresBruto;
-    }
+pagoInteresBruto = Number(pagoInteresBruto.toFixed(2));
+saldo -= pagoInteresBruto;
+saldo = Number(saldo.toFixed(2));
+}
 
     // ================================
     // 5️⃣ CAPITAL
     // ================================
+    saldo = Number(saldo.toFixed(2));
 
     const pagoCapital = Math.min(
       saldo,
@@ -279,7 +344,9 @@ contrato.totalPagadoMorosidad =
   contrato.ultimaFechaPagoInteres = hoy;
 
   // Guardar anterior
-  contrato.anteriorFechaCorte = contrato.nuevaFechaCorte || hoy;
+  contrato.anteriorFechaCorte =
+  contrato.nuevaFechaCorte ||
+  contrato.fechaContrato;
 
   const fechaContrato = new Date(contrato.fechaContrato);
   const diaOriginal = fechaContrato.getDate();
