@@ -805,6 +805,154 @@ const getPaymentsByDateRange = catchError(async (req, res) => {
   });
 });
 
+const Cuote = require("../models/Cuote.js");
+const sequelize = require("../utils/connection.js");
+
+const createAmortizado = catchError(async (req, res) => {
+  const t = await sequelize.transaction();
+
+  try {
+    const {
+      userId,
+      transactionId,
+      paymentMethod,
+      paymentDate,
+      preview,
+    } = req.body;
+
+    if (!userId || !transactionId || !preview) {
+      await t.rollback();
+      return res.status(400).json({
+        message: "Faltan datos",
+      });
+    }
+
+    const transaction = await Transaction.findByPk(
+      transactionId,
+      {
+        include: [
+      {
+        model: Cuote,
+        as: "transactionCuotes",
+      },],
+        transaction: t,
+      }
+    );
+
+    if (!transaction) {
+      await t.rollback();
+      return res.status(404).json({
+        message: "Transacción no encontrada",
+      });
+    }
+
+    const saldoAnterior = Number(transaction.capital);
+
+    // =========================
+    // Crear pago principal
+    // =========================
+    const newPayment = await Payment.create(
+      {
+        amount: preview.aplicado,
+        capital: preview.capital,
+        interestAmount: preview.interes,
+        layPaymentFee: preview.mora,
+        itbms: preview.itbms,
+        paymentDate,
+        paymentMethod,
+        transactionId,
+      },
+      { transaction: t }
+    );
+
+    await PaymentUsers.create(
+      {
+        userId,
+        paymentId: newPayment.id,
+      },
+      { transaction: t }
+    );
+
+    // =========================
+    // Actualizar cuotas
+    // =========================
+    for (const cuota of preview.cuotas) {
+      await Cuote.update(
+        {
+          capitalAmount: cuota.capitalPendiente,
+          amountInterest: cuota.interesPendiente,
+          totalPaid: cuota.totalPaid,
+          status: cuota.status,
+        },
+        {
+          where: { id: cuota.id },
+          transaction: t,
+        }
+      );
+    }
+
+    // =========================
+    // Recalcular capital pendiente
+    // =========================
+    const capitalPendiente = preview.cuotas.reduce(
+      (acc, c) => acc + Number(c.capitalPendiente || 0),
+      0
+    );
+
+    const cuotasPendientes = preview.cuotas.filter(
+      (c) => c.status !== "paid"
+    );
+
+    const nuevaData = {
+      capital: Number(capitalPendiente.toFixed(2)),
+    };
+
+    if (cuotasPendientes.length === 0) {
+      nuevaData.status = "paid";
+      nuevaData.capital = 0;
+    }
+
+    await transaction.update(nuevaData, {
+      transaction: t,
+    });
+
+    // =========================
+    // Historial
+    // =========================
+    await HistorialSaldo.create(
+      {
+        pagoId: newPayment.id,
+        saldoAnterior,
+        nuevoSaldo: nuevaData.capital,
+      },
+      { transaction: t }
+    );
+
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["password"] },
+      transaction: t,
+    });
+
+    await t.commit();
+
+    return res.status(201).json({
+      ...newPayment.toJSON(),
+      saldoAnterior,
+      nuevoSaldo: nuevaData.capital,
+      creadoPor: user,
+    });
+
+  } catch (error) {
+    console.error("ERROR createAmortizado:", error);
+  await t.rollback();
+  return res.status(500).json({
+    message: error.message,
+    error: error.name,
+  });
+    await t.rollback();
+    throw error;
+  }
+});
 
 
 
@@ -829,5 +977,6 @@ module.exports = {
   getDailyClosure,
   getAllPaymentUser,
   getPaymentsByDate,
-  getPaymentsByDateRange
+  getPaymentsByDateRange,
+  createAmortizado,
 };

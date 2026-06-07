@@ -21,6 +21,7 @@ const ContratoEmpeno = require('./ModuloEmpeños/ContratoEmpeño')
 const PrendaEmpeno = require('./ModuloEmpeños/PrendaEmpeño')
 const Pagos = require('./ModuloEmpeños/Pagos')
 const Venta = require("./ModuloEmpeños/Venta.js")
+const HistorialSaldo = require("./HistorialSaldo.js")
 
 
 //Users -> Customer);
@@ -177,6 +178,16 @@ Venta.belongsTo(PrendaEmpeno, {
 
 PrendaEmpeno.hasMany(Venta, {
   foreignKey: "prendaEmpenoId"
+});
+
+
+//historial de pago
+Payment.hasOne(HistorialSaldo, {
+  foreignKey: "pagoId",
+});
+
+HistorialSaldo.belongsTo(Payment, {
+  foreignKey: "pagoId",
 });
 
 

@@ -109,21 +109,56 @@ const getIdContract = catchError(async (req, res) => {
 });
 
 const create = catchError(async (req, res) => {
-  // 1️⃣ Crear la transacción
-  const result = await Transaction.create(req.body);
+  console.log("Datos recibidos:", req.body);
+
+  const {
+    capital,
+    balance,
+    interestsType,
+    interestsPorcent,
+    startDate,
+    nextPaymentDate,
+    description,
+    transactionType,
+    customerId,
+    userId,
+  } = req.body;
+
+  // 🔥 Validaciones básicas
+  if (!capital || !interestsType || !startDate || !transactionType) {
+    return res.status(400).json({
+      message: "Faltan campos obligatorios",
+    });
+  }
+
+  // 🔹 Adaptar datos al modelo
+  const transactionData = {
+    amonunt: capital, // 👈 FIX CLAVE
+    capital,
+    balance: balance || capital,
+    interestsType,
+    interestsPorcent,
+    startDate,
+    nextPaymentDate,
+    description,
+    transactionType,
+    customerId,
+    userId,
+    interestAmount: 0,
+    morosidadAmount: 0,
+  };
+
+  // 1️⃣ Crear
+  const result = await Transaction.create(transactionData);
 
   // 2️⃣ Generar número de contrato
   const year = new Date().getFullYear();
-
-  // Rellenar con ceros a la izquierda hasta 6 dígitos
   const paddedId = String(result.id).padStart(6, "0");
-
   const contractNumber = `${year}-${paddedId}`;
 
-  // 3️⃣ Guardarlo en la misma transacción
   await result.update({ contractNumber });
 
-  // 4️⃣ Buscar completo con includes
+  // 3️⃣ Buscar completo
   const resultComplete = await Transaction.findByPk(result.id, {
     include: [
       Contract,
@@ -196,6 +231,7 @@ const getOne = catchError(async (req, res) => {
         as: "transactionCuotes",
       },
     ],
+    order: [[{ model: Cuote, as: "transactionCuotes" }, "cuoteNumber", "ASC"]],
   });
 
   if (!result) return res.sendStatus(404);
@@ -660,7 +696,135 @@ const getDeudasTransactions = async (req, res) => {
   }
 };
 
+const PDFDocument = require("pdfkit");
 
+const getPagare = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 🔹 Buscar la transacción con relaciones
+    const transaction = await Transaction.findByPk(id, {
+      include: [Customer, User],
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Transacción no encontrada" });
+    }
+
+    const customer = transaction.customer;
+
+    // 🔹 Configurar headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=pagare-${transaction.contractNumber}.pdf`
+    );
+
+    // 🔹 Crear documento
+    const doc = new PDFDocument({ margin: 50 });
+
+    // 🔹 Pipe al response
+    doc.pipe(res);
+
+    // =========================
+    // 📄 HEADER
+    // =========================
+    doc.fontSize(16).text(`PAGARÉ ${transaction.contractNumber}`, {
+      align: "center",
+    });
+
+    doc.moveDown();
+
+    const fecha = new Date(transaction.startDate);
+    doc
+      .fontSize(10)
+      .text(
+        `Panamá, ${fecha.getDate()} de ${
+          fecha.getMonth() + 1
+        } de ${fecha.getFullYear()}`,
+        { align: "right" }
+      );
+
+    doc.moveDown(2);
+
+    // =========================
+    // 🏢 PRESTAMISTA
+    // =========================
+    doc.fontSize(11).text("PRESTAMISTA:", { underline: true });
+
+    doc.text(
+      "LIR TECNOLOGÍA A LA VANGUARDIA, S.A. | RUC: 155657158-2-2017 DV 56"
+    );
+    doc.text(
+      "Dirección: Ciudad de Panamá, Bella Vista, Vía España, Plaza Concordia oficina 247"
+    );
+    doc.text("Teléfono: 211-3178");
+    doc.text("Representante: ISRAEL RODRIGUEZ WARREN");
+
+    doc.moveDown();
+
+    // =========================
+    // 👤 PRESTATARIO
+    // =========================
+    doc.fontSize(11).text("PRESTATARIO:", { underline: true });
+
+    doc.text(
+      `Nombre: ${customer.firstName} ${customer.lastName}`
+    );
+    doc.text(`Cédula: ${customer.numberID}`);
+    doc.text(`Teléfono: ${customer.phone || "N/A"}`);
+
+    doc.moveDown();
+
+    // =========================
+    // 💰 DATOS DEL PRÉSTAMO
+    // =========================
+    doc.text(`Monto: B/. ${transaction.capital}`);
+    doc.text(`Interés: ${transaction.interestsPorcent}%`);
+    doc.text(`Cuota mínima: B/. ${transaction.cuotesAmount}`);
+    doc.text(`Balance total: B/. ${transaction.balance}`);
+
+    doc.moveDown();
+
+    // =========================
+    // 📜 CLÁUSULAS (simplificadas)
+    // =========================
+    doc.fontSize(10);
+
+    doc.text(
+      "El prestatario se compromete a pagar el monto recibido junto con los intereses acordados."
+    );
+
+    doc.moveDown();
+
+    doc.text(
+      "Los pagos se aplicarán primero a intereses, luego a capital."
+    );
+
+    doc.moveDown();
+
+    doc.text(
+      "En caso de mora, se aplicarán recargos conforme a lo establecido."
+    );
+
+    doc.moveDown(2);
+
+    // =========================
+    // ✍️ FIRMAS
+    // =========================
+    doc.text("__________________________", 100, 650);
+    doc.text("Prestamista", 120, 670);
+
+    doc.text("__________________________", 350, 650);
+    doc.text("Prestatario", 370, 670);
+
+    // 🔹 Finalizar
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error generando pagaré" });
+  }
+};
 
 
 
@@ -682,5 +846,8 @@ module.exports = {
   getTransactionsByCustomer,
   setPaidTransactions,
   getTransactionsByDate,
-  getDeudasTransactions,
+  getDeudasTransactions,  
+  getPagare,
+
+
 };

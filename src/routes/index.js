@@ -28,6 +28,9 @@ const routerContratoPDF = require("./contratoPdf.router");
 const pagosEmpenos = require("./reciboPago.routes.js");
 
 const reporteIngresos = require("./reportesEmpenos.routes.js");
+const amortizedLoanRouter = require('./amortizedLoan.router');
+
+router.use('/amortized-loans', amortizedLoanRouter);
 
 // Rutas de reportes de empeños
 router.use('/reportes-empenos', reporteIngresos);

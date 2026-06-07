@@ -1,81 +1,71 @@
-const { 
-    getAll, 
-    create, 
-    getOne, 
-    remove, 
-    update, 
-    setContract, 
-    setInventoryBill, 
-    setProofOfService, 
-    setCuote, 
-    getPrestamosTransactions, 
-    getVentasTransactions, 
-    getEmpeñoTransactions,
-    getIdContract,
-    createManyContracts,
-    getTransactionsByCustomer,
-    setPaidTransactions,
-    getTransactionsByDate,
-    getDeudasTransactions, // 👉 asegurarte de exportarlo desde el controlador
-} = require('../controllers/transaction.controller.js');
+const {
+  getAll,
+  create,
+  getOne,
+  remove,
+  update,
+  setContract,
+  setInventoryBill,
+  setProofOfService,
+  setCuote,
+  getPrestamosTransactions,
+  getVentasTransactions,
+  getEmpeñoTransactions,
+  getIdContract,
+  createManyContracts,
+  getTransactionsByCustomer,
+  setPaidTransactions,
+  getTransactionsByDate,
+  getDeudasTransactions,
+  getPagare,
+  // 👉 asegurarte de exportarlo desde el controlador
+} = require("../controllers/transaction.controller.js");
 
-const express = require('express');
-const { verifyJwt } = require('../utils/verifyJWT');
+const express = require("express");
+const { verifyJwt } = require("../utils/verifyJWT");
+const {
+  getEstadoCuenta,
+} = require("../controllers/estadoCuenta.controller.js");
 const routerTransaction = express.Router();
 
 // rutas generales
-routerTransaction.route('/')
-    .get(getAll)
-    .post(create);
+routerTransaction.route("/").get(getAll).post(create);
 
 // 👉 filtrar por fecha o rango de fechas
-routerTransaction.route('/filter')
-    .get(getTransactionsByDate);
+routerTransaction.route("/filter").get(getTransactionsByDate);
 
-    routerTransaction.route("/deudas")
-    .get(getDeudasTransactions);
-    
+routerTransaction.route("/deudas").get(getDeudasTransactions);
 
 // marcar pagos como pagados
-routerTransaction.route('/setPaidTransactions')
-    .put(setPaidTransactions);
+routerTransaction.route("/setPaidTransactions").put(setPaidTransactions);
 
 // transacciones de un cliente
-routerTransaction.route('/customer/:customerId')
-    .get(getTransactionsByCustomer);
+routerTransaction.route("/customer/:customerId").get(getTransactionsByCustomer);
 
 // contratos, cuotas e inventario
-routerTransaction.route('/:id/contracts')
-    .post(setContract);
+routerTransaction.route("/:id/contracts").post(setContract);
 
-routerTransaction.route('/:id/cuotes')
-    .post(setCuote);
+routerTransaction.route("/:id/cuotes").post(setCuote);
 
-routerTransaction.route('/:id/inventoryBills')
-    .post(setInventoryBill);
+routerTransaction.route("/:id/inventoryBills").post(setInventoryBill);
 
 // obtener número de contrato
-routerTransaction.route('/numeroContrato')
-    .get(getIdContract);
+routerTransaction.route("/numeroContrato").get(getIdContract);
 
 // tipos de transacciones
-routerTransaction.route('/prestamos')
-    .get(getPrestamosTransactions);
+routerTransaction.route("/prestamos").get(getPrestamosTransactions);
 
-routerTransaction.route('/venta')
-    .get(getVentasTransactions);
+routerTransaction.route("/venta").get(getVentasTransactions);
 
-routerTransaction.route('/empeno')
-    .get(getEmpeñoTransactions);
+routerTransaction.route("/empeno").get(getEmpeñoTransactions);
 
 // crear muchos contratos
-routerTransaction.route('/bulk')
-    .post(createManyContracts);
+routerTransaction.route("/bulk").post(createManyContracts);
 
 // operaciones sobre una transacción específica
-routerTransaction.route('/:id')
-    .get(getOne)
-    .delete(remove)
-    .put(update);
+routerTransaction.route("/:id").get(getOne).delete(remove).put(update);
 
+routerTransaction.route("/:id/pagare").get(getPagare);
+
+routerTransaction.get("/estado-cuenta/:customerId", getEstadoCuenta);
 module.exports = routerTransaction;

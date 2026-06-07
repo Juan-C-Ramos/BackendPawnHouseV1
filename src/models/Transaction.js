@@ -21,7 +21,7 @@ const Transaction = sequelize.define('transaction', {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
-            isIn: [['amortizado', 'abonoCapital', 'otros', 'ventas']]
+            isIn: [['amortizado', 'abonoCapital', 'otros', 'ventas', 'normal']]
           }
     },
 
