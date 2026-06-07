@@ -14,11 +14,13 @@ const {
   getDailyClosure,
   getAllPaymentUser,
   getPaymentsByDate,         // ✅ nuevo
-  getPaymentsByDateRange     // ✅ nuevo
+  getPaymentsByDateRange,     // ✅ nuevo
+  createAmortizado
 } = require('../controllers/payment.controller.js');
 
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
+const { generarReciboPagoPrestamoPDF } = require('../controllers/reciboPagoPrestamo.controller.js');
 
 const routerPayment = express.Router();
 
@@ -31,6 +33,8 @@ routerPayment.route('/')
 
 routerPayment.route('/paymentsUsers')
   .get(getAllPaymentUser);   // Obtener todos los pagos de la relación usuario-pago
+
+routerPayment.post("/amortizado", createAmortizado);
 
 // ------------------------
 // 📌 Marcar pagos como registrados
@@ -87,6 +91,11 @@ routerPayment.route('/user/:userId/byDateRange')
 // Obtener pagos de un usuario (general)
 routerPayment.route('/user/:userId')
   .get(getPaymentsByUser);
+
+routerPayment.get(
+  "/recibo-prestamo/:pagoId",
+  generarReciboPagoPrestamoPDF
+);
 
 // ------------------------
 // 🔹 CRUD por ID
