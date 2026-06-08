@@ -33,12 +33,14 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
         message: "Pago no encontrado",
       });
     }
+    console.log("Pago encontrado:", pago.toJSON());
 
     const historial = await HistorialSaldo.findOne({
       where: {
         pagoId: pago.id,
       },
     });
+    console.log("Historial de saldo encontrado:", historial ? historial.toJSON() : "No encontrado");
 
     const paymentUser = await PaymentUsers.findOne({
       where: {
@@ -102,11 +104,7 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
         }
       );
 
-    doc
-      .fontSize(8)
-      .text("Préstamos personales", {
-        align: "center",
-      });
+   
 
     doc
       .fontSize(8)
@@ -353,6 +351,21 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
     doc.text(
       `B/. ${Number(
         historial?.nuevoSaldo || 0
+      ).toFixed(2)}`,
+      {
+        align: "right",
+      }
+    );
+    doc.text(
+      "Morosidad",
+      10,
+      doc.y,
+      { continued: true }
+    );
+
+    doc.text(
+      `B/. ${Number(
+        transaccion?.morosidadAmount || 0
       ).toFixed(2)}`,
       {
         align: "right",
