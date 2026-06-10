@@ -29,7 +29,7 @@ const pagosEmpenos = require("./reciboPago.routes.js");
 
 const reporteIngresos = require("./reportesEmpenos.routes.js");
 const amortizedLoanRouter = require('./amortizedLoan.router');
-const { corregirPrestamos } = require('../controllers/admin.controller.js');
+const adminRouter = require('./admin.router.js');
 
 router.use('/amortized-loans', amortizedLoanRouter);
 
@@ -77,7 +77,7 @@ router.use("/recibo-pdf", pagosEmpenos);
 
 //configuraciones ADMIN
 
-router.use('/admin', corregirPrestamos);
+router.use('/admin', adminRouter);
 
 
 module.exports = router;
