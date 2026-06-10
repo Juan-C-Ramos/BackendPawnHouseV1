@@ -22,6 +22,7 @@ const PrendaEmpeno = require('./ModuloEmpeños/PrendaEmpeño')
 const Pagos = require('./ModuloEmpeños/Pagos')
 const Venta = require("./ModuloEmpeños/Venta.js")
 const HistorialSaldo = require("./HistorialSaldo.js")
+const DisbursementAccount = require("./DisbursementAccount.js")
 
 
 //Users -> Customer);
@@ -190,6 +191,15 @@ HistorialSaldo.belongsTo(Payment, {
   foreignKey: "pagoId",
 });
 
+// cuentas de desembolso Presatamos
+Transaction.hasOne(DisbursementAccount, {
+  foreignKey: "transactionId",
+});
+
+DisbursementAccount.belongsTo(Transaction, {
+  foreignKey: "transactionId",
+});
+
 
 module.exports = {
   // modelos existentes
@@ -209,10 +219,12 @@ module.exports = {
   IdPhoto,
   Cuotes,
   LoginRegister,
+  HistorialSaldo,
+  DisbursementAccount,
 
   // 🔥 módulo de empeños
   ContratoEmpeno,
   PrendaEmpeno,
   Pagos,
-  Venta
+  Venta,
 }

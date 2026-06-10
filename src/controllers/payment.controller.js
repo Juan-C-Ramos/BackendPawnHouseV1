@@ -11,28 +11,68 @@ const HistorialSaldo = require('../models/HistorialSaldo');
 const PaymentUsers = require("../models/PaymentsUsers.js");
 const Role = require("../models/Role.js");
 
-function getNextPaymentDate(fecha) {
-  const d = new Date(fecha);
-  if (isNaN(d)) return null;
+// function getNextPaymentDate(fecha) {
+//   const d = new Date(fecha);
+//   if (isNaN(d)) return null;
 
-  const year = d.getFullYear();
-  const month = d.getMonth();
-  const day = d.getDate();
+//   const year = d.getFullYear();
+//   const month = d.getMonth();
+//   const day = d.getDate();
 
-  const lastDay = new Date(year, month + 1, 0).getDate(); // último día del mes
-  const scheduled15 = new Date(year, month, 15);
-  const scheduledLast = new Date(year, month, lastDay);
+//   const lastDay = new Date(year, month + 1, 0).getDate(); // último día del mes
+//   const scheduled15 = new Date(year, month, 15);
+//   const scheduledLast = new Date(year, month, lastDay);
 
-  if (d.getTime() < scheduled15.getTime()) return scheduled15;
-  if (d.getTime() < scheduledLast.getTime()) return scheduledLast;
+//   if (d.getTime() < scheduled15.getTime()) return scheduled15;
+//   if (d.getTime() < scheduledLast.getTime()) return scheduledLast;
 
-  let nextMonth = month + 1;
-  let nextYear = year;
-  if (nextMonth > 11) {
-    nextMonth = 0;
-    nextYear++;
+//   let nextMonth = month + 1;
+//   let nextYear = year;
+//   if (nextMonth > 11) {
+//     nextMonth = 0;
+//     nextYear++;
+//   }
+//   return new Date(nextYear, nextMonth, 15);
+// }
+
+
+function getNextPaymentDate(currentNextPaymentDate, paymentDate) {
+  const current = new Date(currentNextPaymentDate);
+  const payment = new Date(paymentDate);
+
+  const currentDay = current.getDate();
+  const paymentDay = payment.getDate();
+
+  // Vencimiento en día 15
+  if (currentDay === 15) {
+    // Solo avanzar cuando ya llegó el corte
+    if (paymentDay >= 15) {
+      const ultimoDiaMes = new Date(
+        current.getFullYear(),
+        current.getMonth() + 1,
+        0
+      ).getDate();
+
+      return new Date(
+        current.getFullYear(),
+        current.getMonth(),
+        ultimoDiaMes
+      );
+    }
+
+    return current;
   }
-  return new Date(nextYear, nextMonth, 15);
+
+  // Vencimiento en fin de mes
+  if (paymentDay >= 15) {
+    return new Date(
+      current.getFullYear(),
+      current.getMonth() + 1,
+      15
+    );
+  }
+
+  return current;
 }
 
 
@@ -184,7 +224,10 @@ const create = catchError(async (req, res) => {
   }
 
   const nuevoSaldo = nuevoCapital;
-  const nextPaymentDate = getNextPaymentDate(paymentDate || new Date());
+  const nextPaymentDate = getNextPaymentDate(
+  transaction.nextPaymentDate,
+  paymentDate || new Date()
+);
 
   // 6️⃣ Actualizar transacción
   if (nuevoCapital < 0.01 && nuevaMorosidad < 0.01) {
@@ -402,7 +445,7 @@ const getPaymentsByUserAndMonth = catchError(async (req, res) => {
     include: [
       {
         model: Transaction,
-        include: [ Customer ]
+        include: [Customer]
       }
     ],
     order: [['paymentDate', 'DESC']]
@@ -445,7 +488,7 @@ const getPaymentsByUserByDateRange = catchError(async (req, res) => {
     include: [
       {
         model: Transaction,
-        include: [ Customer ]
+        include: [Customer]
       }
     ],
     order: [['paymentDate', 'DESC']]
@@ -635,13 +678,13 @@ const getPaymentsByDate = catchError(async (req, res) => {
 
   return res.json({
     payments,
-    withITBMS: { 
-      ...calculateTotals(withItbms), 
-      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId)) 
+    withITBMS: {
+      ...calculateTotals(withItbms),
+      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId))
     },
-    withoutITBMS: { 
-      ...calculateTotals(withoutItbms), 
-      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId)) 
+    withoutITBMS: {
+      ...calculateTotals(withoutItbms),
+      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId))
     },
   });
 });
@@ -794,13 +837,13 @@ const getPaymentsByDateRange = catchError(async (req, res) => {
 
   return res.json({
     payments,
-    withITBMS: { 
-      ...calculateTotals(withItbms), 
-      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId)) 
+    withITBMS: {
+      ...calculateTotals(withItbms),
+      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId))
     },
-    withoutITBMS: { 
-      ...calculateTotals(withoutItbms), 
-      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId)) 
+    withoutITBMS: {
+      ...calculateTotals(withoutItbms),
+      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId))
     },
   });
 });
@@ -831,10 +874,10 @@ const createAmortizado = catchError(async (req, res) => {
       transactionId,
       {
         include: [
-      {
-        model: Cuote,
-        as: "transactionCuotes",
-      },],
+          {
+            model: Cuote,
+            as: "transactionCuotes",
+          },],
         transaction: t,
       }
     );
@@ -907,6 +950,11 @@ const createAmortizado = catchError(async (req, res) => {
       capital: Number(capitalPendiente.toFixed(2)),
     };
 
+    nuevaData.nextPaymentDate = getNextPaymentDate(
+      transaction.nextPaymentDate,
+      paymentDate
+    );
+
     if (cuotasPendientes.length === 0) {
       nuevaData.status = "paid";
       nuevaData.capital = 0;
@@ -944,11 +992,11 @@ const createAmortizado = catchError(async (req, res) => {
 
   } catch (error) {
     console.error("ERROR createAmortizado:", error);
-  await t.rollback();
-  return res.status(500).json({
-    message: error.message,
-    error: error.name,
-  });
+    await t.rollback();
+    return res.status(500).json({
+      message: error.message,
+      error: error.name,
+    });
     await t.rollback();
     throw error;
   }

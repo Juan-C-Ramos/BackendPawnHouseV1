@@ -122,6 +122,7 @@ const create = catchError(async (req, res) => {
     transactionType,
     customerId,
     userId,
+    cuentaDesembolso, // 👈 NUEVO
   } = req.body;
 
   // 🔥 Validaciones básicas
@@ -133,14 +134,14 @@ const create = catchError(async (req, res) => {
 
   // 🔹 Adaptar datos al modelo
   const transactionData = {
-    amonunt: capital, // 👈 FIX CLAVE
+    amonunt: capital,
     capital,
     balance: balance || capital,
     interestsType,
     interestsPorcent,
     startDate,
     nextPaymentDate,
-    description,
+    description: description || "",
     transactionType,
     customerId,
     userId,
@@ -148,17 +149,25 @@ const create = catchError(async (req, res) => {
     morosidadAmount: 0,
   };
 
-  // 1️⃣ Crear
+  // 1️⃣ Crear transacción
   const result = await Transaction.create(transactionData);
 
-  // 2️⃣ Generar número de contrato
+  // 2️⃣ Guardar cuenta de desembolso
+  if (cuentaDesembolso) {
+    await DisbursementAccount.create({
+      transactionId: result.id,
+      bankName: cuentaDesembolso,
+    });
+  }
+
+  // 3️⃣ Generar número de contrato
   const year = new Date().getFullYear();
   const paddedId = String(result.id).padStart(6, "0");
   const contractNumber = `${year}-${paddedId}`;
 
   await result.update({ contractNumber });
 
-  // 3️⃣ Buscar completo
+  // 4️⃣ Buscar completo
   const resultComplete = await Transaction.findByPk(result.id, {
     include: [
       Contract,
@@ -179,6 +188,9 @@ const create = catchError(async (req, res) => {
       {
         model: Cuote,
         as: "transactionCuotes",
+      },
+      {
+        model: DisbursementAccount, // 👈 NUEVO
       },
     ],
   });
