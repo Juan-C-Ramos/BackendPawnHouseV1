@@ -1,4 +1,4 @@
-const sequelize = require("../config/database");
+const sequelize = require('../utils/connection');
 const { Transaction } = require("../models");
 const catchError = require("../utils/catchError");
 
