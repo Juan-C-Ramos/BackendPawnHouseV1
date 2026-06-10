@@ -29,6 +29,7 @@ const pagosEmpenos = require("./reciboPago.routes.js");
 
 const reporteIngresos = require("./reportesEmpenos.routes.js");
 const amortizedLoanRouter = require('./amortizedLoan.router');
+const { corregirPrestamos } = require('../controllers/admin.controller.js');
 
 router.use('/amortized-loans', amortizedLoanRouter);
 
@@ -41,6 +42,8 @@ router.use('/reportes-empenos', reporteIngresos);
 
 // Rutas de pagos de empeños
 router.use('/pagos-empenos', pagosEmpenoRouter);
+
+
 
 
 
@@ -72,7 +75,9 @@ router.use('/', routerDeclaracion);
 router.use("/contrato-pdf", routerContratoPDF);
 router.use("/recibo-pdf", pagosEmpenos);
 
+//configuraciones ADMIN
 
+router.use('/admin', corregirPrestamos);
 
 
 module.exports = router;
