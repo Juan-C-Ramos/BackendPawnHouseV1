@@ -709,6 +709,7 @@ const getDeudasTransactions = async (req, res) => {
 };
 
 const PDFDocument = require("pdfkit");
+const DisbursementAccount = require("../models/DisbursementAccount.js");
 
 const getPagare = async (req, res) => {
   try {
