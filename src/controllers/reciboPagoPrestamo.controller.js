@@ -8,6 +8,7 @@ const {
   Transaction,
   Customer,
   User,
+  Cuotes
 } = require("../models");
 
 const HistorialSaldo = require("../models/HistorialSaldo");
@@ -23,7 +24,17 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
       include: [
         {
           model: Transaction,
-          include: [Customer],
+          include: [
+            Customer,
+            {
+              model: Cuotes,
+              as: "transactionCuotes",
+              where: {
+                status: "notPaid",
+              },
+              required: false,
+            },
+          ],
         },
       ],
     });
@@ -57,6 +68,26 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
     const transaccion = pago.transaction;
     const cliente = transaccion.customer;
 
+    const cuotasPendientes =
+  transaccion.transactionCuotes || [];
+
+const saldoCapital = cuotasPendientes.reduce(
+  (total, cuota) =>
+    total + Number(cuota.capitalAmount || 0),
+  0
+);
+
+const saldoInteres = cuotasPendientes.reduce(
+  (total, cuota) =>
+    total + Number(cuota.amountInterest || 0),
+  0
+);
+
+const saldoTotal =
+  saldoCapital +
+  saldoInteres +
+  Number(transaccion?.morosidadAmount || 0);
+
     // const logoPath = path.join(
     //   __dirname,
     //   "../../logoVFinal.png"
@@ -83,9 +114,9 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
     // ENCABEZADO
     // ====================================
 
-    
 
-    
+
+
 
     doc
       .fontSize(11)
@@ -104,7 +135,7 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
         }
       );
 
-   
+
 
     doc
       .fontSize(8)
@@ -332,47 +363,123 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
     doc.moveDown(0.4);
 
     // ====================================
-    // SALDO ACTUAL
-    // ====================================
+// SALDO ACTUAL
+// ====================================
 
-    doc
-      .font("Helvetica-Bold")
-      .text("SALDO ACTUAL");
+doc
+  .font("Helvetica-Bold")
+  .text("SALDO ACTUAL");
 
-    doc.font("Helvetica");
+doc.font("Helvetica");
 
-    doc.text(
-      "Capital",
+if (transaccion.interestsType === "amortizado") {
+
+  // Capital pendiente
+  doc.text(
+    "Capital",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${saldoCapital.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  // Interés pendiente
+  doc.text(
+    "Interés",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${saldoInteres.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  // Morosidad
+  doc.text(
+    "Morosidad",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${Number(
+      transaccion?.morosidadAmount || 0
+    ).toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  doc.moveDown(0.3);
+
+  doc
+    .font("Helvetica-Bold")
+    .text(
+      "Total Adeudado",
       10,
       doc.y,
       { continued: true }
     );
 
-    doc.text(
-      `B/. ${Number(
-        historial?.nuevoSaldo || 0
-      ).toFixed(2)}`,
-      {
-        align: "right",
-      }
-    );
-    doc.text(
-      "Morosidad",
-      10,
-      doc.y,
-      { continued: true }
-    );
+  doc.text(
+    `B/. ${saldoTotal.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
 
-    doc.text(
-      `B/. ${Number(
-        transaccion?.morosidadAmount || 0
-      ).toFixed(2)}`,
-      {
-        align: "right",
-      }
-    );
+  doc.font("Helvetica");
 
-    doc.moveDown(4);
+} else if (
+  transaccion.interestsType === "abonoCapital"
+) {
+
+  doc.text(
+    "Capital",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${Number(
+      historial?.nuevoSaldo || 0
+    ).toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  doc.text(
+    "Morosidad",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${Number(
+      transaccion?.morosidadAmount || 0
+    ).toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+}
+
+doc.moveDown(4);
 
     // ====================================
     // FIRMA

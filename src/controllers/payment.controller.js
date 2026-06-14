@@ -302,12 +302,103 @@ const remove = async (req, res) => {
  */
 const update = async (req, res) => {
   try {
-    const [updated] = await Payment.update(req.body, { where: { id: req.params.id } });
-    if (!updated) return res.status(404).json({ message: "Pago no encontrado" });
-    return res.json({ message: "Pago actualizado" });
+
+    const payment = await Payment.findByPk(
+      req.params.id,
+      {
+        include: [Transaction],
+      }
+    );
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Pago no encontrado",
+      });
+    }
+
+    const transaction = payment.transaction;
+
+    // =====================================
+    // DESHACER EL PAGO ANTERIOR
+    // =====================================
+
+    transaction.capital =
+      Number(transaction.capital || 0) +
+      Number(payment.capital || 0);
+
+    transaction.morosidadAmount =
+      Number(transaction.morosidadAmount || 0) +
+      Number(payment.layPaymentFee || 0);
+
+    // =====================================
+    // APLICAR NUEVO PAGO
+    // =====================================
+
+    transaction.capital = Math.max(
+      transaction.capital -
+        Number(req.body.capital || 0),
+      0
+    );
+
+    transaction.morosidadAmount = Math.max(
+      transaction.morosidadAmount -
+        Number(req.body.layPaymentFee || 0),
+      0
+    );
+
+    await transaction.save();
+
+    // =====================================
+    // ACTUALIZAR PAGO
+    // =====================================
+
+    await payment.update({
+      amount: req.body.amount,
+      capital: req.body.capital,
+      interestAmount:
+        req.body.interestAmount,
+      layPaymentFee:
+        req.body.layPaymentFee,
+      itbms: req.body.itbms,
+      paymentDate:
+        req.body.paymentDate,
+      paymentMethod:
+        req.body.paymentMethod,
+    });
+
+    // =====================================
+    // ACTUALIZAR HISTORIAL
+    // =====================================
+
+    const historial =
+      await HistorialSaldo.findOne({
+        where: {
+          pagoId: payment.id,
+        },
+      });
+
+    if (historial) {
+      historial.nuevoSaldo =
+        transaction.capital;
+
+      await historial.save();
+    }
+
+    return res.json({
+      message:
+        "Pago actualizado correctamente",
+    });
+
   } catch (error) {
-    console.error("Error en update:", error);
-    return res.status(500).json({ message: "Error al actualizar el pago" });
+    console.error(
+      "Error en update:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Error al actualizar el pago",
+    });
   }
 };
 
