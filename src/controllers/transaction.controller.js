@@ -237,6 +237,7 @@ const getOne = catchError(async (req, res) => {
       {
         model: Payment,
         include: [Cuote],
+        order: [["id", "ASC"]], // ordenar pagos por fecha
       },
       {
         model: Cuote,
