@@ -5,6 +5,7 @@ const {
   Customer,
   User,
 } = require('../models');
+const Refinanciamientos = require('../models/Refinanciamientos');
 
 const sequelize = require('../utils/connection');
 
@@ -171,6 +172,216 @@ await transaction.update(
   }
 };
 
+
+const createAmortizedRefinancing = async (
+  req,
+  res
+) => {
+  const t =
+    await sequelize.transaction();
+
+  try {
+    const {
+      capital,
+      balance,
+      interestsType,
+      interestsPorcent,
+      cuotes,
+      cuotesAmount,
+      interestAmount,
+      startDate,
+      nextPaymentDate,
+      description,
+      transactionType,
+      customerId,
+      userId,
+      amortizationTable,
+      branchId,
+      contratosRefinanciados,
+    } = req.body;
+
+    // 🔥 validaciones básicas
+    if (
+      !capital ||
+      !customerId ||
+      !userId
+    ) {
+      return res.status(400).json({
+        message:
+          "Faltan datos obligatorios",
+      });
+    }
+
+    const customer =
+      await Customer.findByPk(
+        customerId
+      );
+
+    if (!customer) {
+      return res.status(404).json({
+        message:
+          "Cliente no encontrado",
+      });
+    }
+
+    const user =
+      await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message:
+          "Usuario no encontrado",
+      });
+    }
+
+    // 🔥 crear nuevo contrato amortizado
+    const transaction =
+      await Transaction.create(
+        {
+          capital,
+
+          amonunt: capital,
+
+          balance,
+
+          interestsType,
+
+          interestsPorcent,
+
+          cuotes,
+
+          cuotesAmount,
+
+          interestAmount,
+
+          startDate,
+
+          nextPaymentDate,
+
+          description,
+
+          transactionType,
+
+          customerId,
+
+          userId,
+
+          branchId,
+
+          status: "inProgress",
+        },
+        {
+          transaction: t,
+        }
+      );
+
+    // 🔥 generar número de contrato
+    const year =
+      new Date().getFullYear();
+
+    const paddedId = String(
+      transaction.id
+    ).padStart(6, "0");
+
+    const contractNumber = `${year}-${paddedId}`;
+
+    await transaction.update(
+      {
+        contractNumber,
+      },
+      {
+        transaction: t,
+      }
+    );
+
+    // 🔥 generar cuotas
+    if (
+      amortizationTable &&
+      Array.isArray(
+        amortizationTable
+      ) &&
+      amortizationTable.length > 0
+    ) {
+      await generarCuotas({
+        transaction,
+        amortizationTable,
+        t,
+      });
+    }
+
+    // 🔥 marcar contratos refinanciados
+    if (
+      Array.isArray(
+        contratosRefinanciados
+      ) &&
+      contratosRefinanciados.length > 0
+    ) {
+      await Transaction.update(
+        {
+          status:
+            "refinanciado",
+          transactionType:
+            "prestamo refinanciado",
+        },
+        {
+          where: {
+            id: contratosRefinanciados,
+          },
+          transaction: t,
+        }
+      );
+
+      // 🔥 registrar refinanciamiento
+      await Refinanciamientos.create(
+        {
+          numeroContrato:
+            transaction.id,
+
+          contratosRefinanciados,
+        },
+        {
+          transaction: t,
+        }
+      );
+    }
+
+    await t.commit();
+
+    const result =
+      await Transaction.findByPk(
+        transaction.id,
+        {
+          include: [
+            {
+              model: Cuotes,
+              as: "transactionCuotes",
+            },
+          ],
+        }
+      );
+
+    return res.status(201).json({
+      contratoNuevo: result,
+      refinanciamiento: {
+        numeroContrato:
+          transaction.id,
+        contratosRefinanciados,
+      },
+    });
+  } catch (error) {
+    await t.rollback();
+
+    console.error(error);
+
+    return res.status(500).json({
+      message:
+        "Error al crear refinanciamiento amortizado",
+      error: error.message,
+    });
+  }
+};
+
+
 // 🔥 obtener todos los préstamos amortizados
 const getAllAmortizedLoans = async (req, res) => {
   try {
@@ -245,6 +456,7 @@ module.exports = {
   createAmortizedLoan,
   getAllAmortizedLoans,
   getAmortizedLoanById,
+  createAmortizedRefinancing,
 };
 
 
