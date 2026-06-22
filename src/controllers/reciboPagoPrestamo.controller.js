@@ -29,9 +29,7 @@ const generarReciboPagoPrestamoPDF = async (req, res) => {
             {
               model: Cuotes,
               as: "transactionCuotes",
-              where: {
-                status: "notPaid",
-              },
+              
               required: false,
             },
           ],
