@@ -3,6 +3,7 @@ const Refinanciamientos = require('../models/Refinanciamientos');
 const Transactions = require('../models/Transaction');
 const { Op } = require('sequelize');
 const Customer = require('../models/Customer');
+const { DisbursementAccount } = require('../models');
 
 const getAll = catchError(async (req, res) => {
     const results = await Refinanciamientos.findAll();
@@ -10,12 +11,23 @@ const getAll = catchError(async (req, res) => {
 });
 
 const create = catchError(async (req, res) => {
-    const { contratosRefinanciados, ...restContrato } = req.body;
+    const {
+    contratosRefinanciados,
+    cuentaDesembolso,
+    ...restContrato
+} = req.body;
 
     // 1. Crear contrato nuevo
     const nuevoContrato = await Transactions.create({
         ...restContrato
     });
+
+    if (cuentaDesembolso) {
+    await DisbursementAccount.create({
+        transactionId: nuevoContrato.id,
+        bankName: cuentaDesembolso,
+    });
+}
 
     // 2. Generar número de contrato
     const year = new Date().getFullYear();

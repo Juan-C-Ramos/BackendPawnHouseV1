@@ -7,6 +7,7 @@ const {
   User,
 } = require('../models');
 const Refinanciamientos = require('../models/Refinanciamientos');
+const DisbursementAccount = require('../models/DisbursementAccount');
 
 const sequelize = require('../utils/connection');
 
@@ -61,6 +62,7 @@ const createAmortizedLoan = async (req, res) => {
       customerId,
       userId,
       amortizationTable,
+      cuentaDesembolso, // 👈 NUEVO
     } = req.body;
 
     // 🔥 validaciones básicas
@@ -125,6 +127,18 @@ const createAmortizedLoan = async (req, res) => {
         transaction: t,
       }
     );
+    // 🔥 guardar cuenta de desembolso
+if (cuentaDesembolso) {
+  await DisbursementAccount.create(
+    {
+      transactionId: transaction.id,
+      bankName: cuentaDesembolso,
+    },
+    {
+      transaction: t,
+    }
+  );
+}
 
     const year = new Date().getFullYear();
 const paddedId = String(transaction.id).padStart(6, "0");
@@ -156,6 +170,9 @@ await transaction.update(
           model: Cuotes,
           as: 'transactionCuotes',
         },
+        {
+      model: DisbursementAccount,
+    },
       ],
     });
 
@@ -197,6 +214,7 @@ const createAmortizedRefinancing = async (
       userId,
       amortizationTable,
       contratosRefinanciados,
+      cuentaDesembolso,
     } = req.body;
     console.log("Datos recibidos:", req.body);
 
@@ -273,6 +291,18 @@ const createAmortizedRefinancing = async (
           transaction: t,
         }
       );
+      // 🔥 guardar cuenta de desembolso
+if (cuentaDesembolso) {
+  await DisbursementAccount.create(
+    {
+      transactionId: transaction.id,
+      bankName: cuentaDesembolso,
+    },
+    {
+      transaction: t,
+    }
+  );
+}
 
     // 🔥 generar número de contrato
     const year =
@@ -356,7 +386,10 @@ await Transaction.update(
             {
               model: Cuotes,
               as: "transactionCuotes",
-            },         
+            },    
+            {
+          model: DisbursementAccount,
+        },     
           ],
         }
       );
