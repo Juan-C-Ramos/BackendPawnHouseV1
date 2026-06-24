@@ -1,6 +1,8 @@
 const catchError = require('../utils/catchError');
 const Refinanciamientos = require('../models/Refinanciamientos');
 const Transactions = require('../models/Transaction');
+const { Op } = require('sequelize');
+const Customer = require('../models/Customer');
 
 const getAll = catchError(async (req, res) => {
     const results = await Refinanciamientos.findAll();
@@ -10,37 +12,58 @@ const getAll = catchError(async (req, res) => {
 const create = catchError(async (req, res) => {
     const { contratosRefinanciados, ...restContrato } = req.body;
 
-    // 1. Crear primero el contrato nuevo en Transactions
+    // 1. Crear contrato nuevo
     const nuevoContrato = await Transactions.create({
         ...restContrato
     });
 
-    // 2. Generar numeroContrato con formato AÑO-ID padded
+    // 2. Generar número de contrato
     const year = new Date().getFullYear();
     const paddedId = String(nuevoContrato.id).padStart(7, "0");
     const numeroContrato = `${year}-${paddedId}`;
 
-    // 3. Actualizar el contrato con su numeroContrato
     console.log(nuevoContrato.id, numeroContrato);
-    await Transactions.update({ contractNumber:numeroContrato }, { where: { id: nuevoContrato.id } });
 
-    // 4. Marcar los contratos refinanciados
-    if (Array.isArray(contratosRefinanciados) && contratosRefinanciados.length > 0) {
+    // 3. Actualizar contrato y obtenerlo actualizado
+    const [_, [updatedContrato]] = await Transactions.update(
+        { contractNumber: numeroContrato },
+        {
+            where: { id: nuevoContrato.id },
+            returning: true,
+        }
+    );
+
+    // 4. IDs refinanciados
+    const contratosIds = Array.isArray(contratosRefinanciados)
+        ? contratosRefinanciados.map(c => c.id)
+        : [];
+
+    // 5. Marcar refinanciados
+    if (contratosIds.length > 0) {
         await Transactions.update(
-            { status: "refinanciado", transactionType: "prestamo refinanciado" },
-            { where: { id: contratosRefinanciados } }
+            {
+                status: "refinanciado",
+                transactionType: "prestamo refinanciado",
+            },
+            {
+                where: { id: contratosIds },
+            }
         );
     }
 
-    // 5. Crear el registro en Refinanciamientos
+    // 6. Refinanciamiento
     const refinanciamiento = await Refinanciamientos.create({
-        numeroContrato: nuevoContrato.id,              // el número del contrato nuevo
-        contratosRefinanciados: contratosRefinanciados // guardado como string/array
+        numeroContrato: nuevoContrato.id,
+        contratosRefinanciados: contratosIds,
     });
 
+    // 7. Cliente
+    const cliente = await Customer.findByPk(nuevoContrato.customerId);
+
     return res.status(201).json({
-        contratoNuevo: nuevoContrato,
-        refinanciamiento
+        contratoNuevo: updatedContrato,
+        refinanciamiento,
+        cliente,
     });
 });
 

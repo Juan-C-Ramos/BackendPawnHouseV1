@@ -1,4 +1,5 @@
 
+const { Op } = require('sequelize');
 const {
   Transaction,
   Cuotes,
@@ -60,7 +61,6 @@ const createAmortizedLoan = async (req, res) => {
       customerId,
       userId,
       amortizationTable,
-      branchId,
     } = req.body;
 
     // 🔥 validaciones básicas
@@ -95,6 +95,7 @@ const createAmortizedLoan = async (req, res) => {
 
         balance,
 
+
         interestsType,
 
         interestsPorcent,
@@ -117,7 +118,6 @@ const createAmortizedLoan = async (req, res) => {
 
         userId,
 
-        branchId,
 
         status: 'inProgress',
       },
@@ -196,9 +196,9 @@ const createAmortizedRefinancing = async (
       customerId,
       userId,
       amortizationTable,
-      branchId,
       contratosRefinanciados,
     } = req.body;
+    console.log("Datos recibidos:", req.body);
 
     // 🔥 validaciones básicas
     if (
@@ -266,7 +266,6 @@ const createAmortizedRefinancing = async (
 
           userId,
 
-          branchId,
 
           status: "inProgress",
         },
@@ -316,20 +315,22 @@ const createAmortizedRefinancing = async (
       ) &&
       contratosRefinanciados.length > 0
     ) {
-      await Transaction.update(
-        {
-          status:
-            "refinanciado",
-          transactionType:
-            "prestamo refinanciado",
-        },
-        {
-          where: {
-            id: contratosRefinanciados,
-          },
-          transaction: t,
-        }
-      );
+      const ids = contratosRefinanciados.map(c => c.id);
+
+await Transaction.update(
+  {
+    status: "refinanciado",
+    transactionType: "prestamo refinanciado",
+  },
+  {
+    where: {
+      id: {
+        [Op.in]: ids,
+      },
+    },
+    transaction: t,
+  }
+);
 
       // 🔥 registrar refinanciamiento
       await Refinanciamientos.create(
@@ -337,7 +338,7 @@ const createAmortizedRefinancing = async (
           numeroContrato:
             transaction.id,
 
-          contratosRefinanciados,
+          contratosRefinanciados:ids,
         },
         {
           transaction: t,
@@ -355,7 +356,7 @@ const createAmortizedRefinancing = async (
             {
               model: Cuotes,
               as: "transactionCuotes",
-            },
+            },         
           ],
         }
       );
@@ -367,6 +368,7 @@ const createAmortizedRefinancing = async (
           transaction.id,
         contratosRefinanciados,
       },
+      cliente: customer,
     });
   } catch (error) {
     await t.rollback();
