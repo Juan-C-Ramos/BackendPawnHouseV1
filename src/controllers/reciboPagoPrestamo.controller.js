@@ -119,7 +119,7 @@ const saldoTotal =
     doc
       .fontSize(11)
       .font("Helvetica-Bold")
-      .text("LIR Express", {
+      .text("LIR Tecnología a la Vanguardia", {
         align: "center",
       });
 
@@ -127,7 +127,7 @@ const saldoTotal =
       .fontSize(8)
       .font("Helvetica")
       .text(
-        "Resolución No. 574 del 22 de agosto de 2025",
+        " ",
         {
           align: "center",
         }
