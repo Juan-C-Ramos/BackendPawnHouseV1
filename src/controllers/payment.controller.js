@@ -37,42 +37,41 @@ const Role = require("../models/Role.js");
 
 
 function getNextPaymentDate(currentNextPaymentDate, paymentDate) {
-  const current = new Date(currentNextPaymentDate);
+  const current = currentNextPaymentDate
+    ? new Date(currentNextPaymentDate)
+    : new Date();
+
   const payment = new Date(paymentDate);
 
-  const currentDay = current.getDate();
-  const paymentDay = payment.getDate();
+  // Validar fechas
+  if (isNaN(current.getTime()) || isNaN(payment.getTime())) {
+    return null;
+  }
 
-  // Vencimiento en día 15
-  if (currentDay === 15) {
-    // Solo avanzar cuando ya llegó el corte
-    if (paymentDay >= 15) {
-      const ultimoDiaMes = new Date(
-        current.getFullYear(),
-        current.getMonth() + 1,
-        0
-      ).getDate();
+  // Ignorar la hora
+  current.setHours(0, 0, 0, 0);
+  payment.setHours(0, 0, 0, 0);
 
-      return new Date(
-        current.getFullYear(),
-        current.getMonth(),
-        ultimoDiaMes
-      );
-    }
-
+  // Si pagó antes de la fecha de corte, se mantiene
+  if (payment < current) {
     return current;
   }
 
-  // Vencimiento en fin de mes
-  if (paymentDay >= 15) {
+  // Si pagó del 1 al 14 → último día de ese mismo mes
+  if (payment.getDate() < 15) {
     return new Date(
-      current.getFullYear(),
-      current.getMonth() + 1,
-      15
+      payment.getFullYear(),
+      payment.getMonth() + 1,
+      0
     );
   }
 
-  return current;
+  // Si pagó del 15 al último día → 15 del siguiente mes
+  return new Date(
+    payment.getFullYear(),
+    payment.getMonth() + 1,
+    15
+  );
 }
 
 
@@ -228,6 +227,11 @@ const create = catchError(async (req, res) => {
   transaction.nextPaymentDate,
   paymentDate || new Date()
 );
+
+console.log("Nuevo capital:", nuevoCapital);
+console.log("siguiente fecha de pago:", nextPaymentDate);
+console.log("fecha pago transaccion:",transaction.nextPaymentDate);
+console.log("fecha pago recibido:",paymentDate);
 
   // 6️⃣ Actualizar transacción
   if (nuevoCapital < 0.01 && nuevaMorosidad < 0.01) {
