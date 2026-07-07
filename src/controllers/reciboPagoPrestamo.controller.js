@@ -81,6 +81,18 @@ const saldoInteres = cuotasPendientes.reduce(
   0
 );
 
+const saldoCapitalAnterior =
+  saldoCapital + Number(pago.capital || 0);
+
+const saldoInteresAnterior =
+  saldoInteres + Number(pago.interestAmount || 0);
+
+const saldoTotalAnterior =
+  saldoCapitalAnterior +
+  saldoInteresAnterior +
+  Number(transaccion.morosidadAmount || 0) +
+  Number(pago.layPaymentFee || 0);
+
 const saldoTotal =
   saldoCapital +
   saldoInteres +
@@ -202,38 +214,92 @@ const saldoTotal =
     // SALDOS ANTERIORES
     // ====================================
 
-    doc
-      .font("Helvetica-Bold")
-      .text("SALDO ANTERIOR");
+    doc.font("Helvetica-Bold")
+   .text("SALDO ANTERIOR");
 
-    doc.font("Helvetica");
+doc.font("Helvetica");
 
-    doc.text(
-      `Capital`,
-      10,
-      doc.y,
-      { continued: true }
-    );
+if (transaccion.interestsType === "amortizado") {
 
-    doc.text(
-      `B/. ${Number(
-        historial?.saldoAnterior || 0
-      ).toFixed(2)}`,
-      {
-        align: "right",
-      }
-    );
+  doc.text(
+    "Capital",
+    10,
+    doc.y,
+    { continued: true }
+  );
 
-    doc.moveDown(0.5);
+  doc.text(
+    `B/. ${saldoCapitalAnterior.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
 
-    doc.text(
-      "-----------------------------------------------------",
-      {
-        align: "center",
-      }
-    );
+  doc.text(
+    "Interés",
+    10,
+    doc.y,
+    { continued: true }
+  );
 
-    doc.moveDown(0.4);
+  doc.text(
+    `B/. ${saldoInteresAnterior.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  doc.text(
+    "Morosidad",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${(Number(transaccion.morosidadAmount || 0) + Number(pago.layPaymentFee || 0)).toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  doc.moveDown(0.3);
+
+  doc.font("Helvetica-Bold");
+
+  doc.text(
+    "Total Adeudado",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${saldoTotalAnterior.toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+  doc.font("Helvetica");
+
+} else {
+
+  doc.text(
+    "Capital",
+    10,
+    doc.y,
+    { continued: true }
+  );
+
+  doc.text(
+    `B/. ${Number(historial?.saldoAnterior || 0).toFixed(2)}`,
+    {
+      align: "right",
+    }
+  );
+
+}
 
     // ====================================
     // DETALLE DEL PAGO
