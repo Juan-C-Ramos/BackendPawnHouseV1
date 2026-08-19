@@ -340,26 +340,26 @@ exports.updateContratoEmpeno = async (req, res) => {
 const contratoUpdate = {
   ...contrato,
 
-  customerId: toNumberOrNull(contrato.customerId) || contratoDb.customerId,
+  customerId: toNumberOrNull(contrato.customerId) ?? contratoDb.customerId,
 
-  montoPrestamo: toNumberOrNull(contrato.montoPrestamo)    || contratoDb.montoPrestamo,
-  montoMaximoaPrestar: toNumberOrNull(contrato.montoMaximoaPrestar) || contratoDb.montoMaximoaPrestar,
-  tasaInteres: toNumberOrNull(contrato.tasaInteres) || contratoDb.tasaInteres,
-  interesMensualEfectivo: toNumberOrNull(contrato.interesMensualEfectivo) || contratoDb.interesMensualEfectivo,
+  montoPrestamo: toNumberOrNull(contrato.montoPrestamo) ?? contratoDb.montoPrestamo,
+  montoMaximoaPrestar: toNumberOrNull(contrato.montoMaximoaPrestar) ?? contratoDb.montoMaximoaPrestar,
+  tasaInteres: toNumberOrNull(contrato.tasaInteres) ?? contratoDb.tasaInteres,
+  interesMensualEfectivo: toNumberOrNull(contrato.interesMensualEfectivo) ?? contratoDb.interesMensualEfectivo,
 
-  plazoMeses: toNumberOrNull(contrato.plazoMeses) || contratoDb.plazoMeses,
-  periodoGraciaDias: toNumberOrNull(contrato.periodoGraciaDias) || contratoDb.periodoGraciaDias,
+  plazoMeses: toNumberOrNull(contrato.plazoMeses) ?? contratoDb.plazoMeses,
+  periodoGraciaDias: toNumberOrNull(contrato.periodoGraciaDias) ?? contratoDb.periodoGraciaDias,
 
-  capitalTotal: toNumberOrNull(contrato.capitalTotal) || contratoDb.capitalTotal,
-  capitalAdeudado: toNumberOrNull(contrato.capitalAdeudado) || contratoDb.capitalAdeudado,
-  totalPagadoCapital: toNumberOrNull(contrato.totalPagadoCapital) || contratoDb.totalPagadoCapital,
+  capitalTotal: toNumberOrNull(contrato.capitalTotal) ?? contratoDb.capitalTotal,
+  capitalAdeudado: toNumberOrNull(contrato.capitalAdeudado) ?? contratoDb.capitalAdeudado,
+  totalPagadoCapital: toNumberOrNull(contrato.totalPagadoCapital) ?? contratoDb.totalPagadoCapital,
 
-  interesAdeudado: toNumberOrNull(contrato.interesAdeudado) || contratoDb.interesAdeudado,
-  totalPagadoInteres: toNumberOrNull(contrato.totalPagadoInteres) || contratoDb.totalPagadoInteres,
+  interesAdeudado: toNumberOrNull(contrato.interesAdeudado) ?? contratoDb.interesAdeudado,
+  totalPagadoInteres: toNumberOrNull(contrato.totalPagadoInteres) ?? contratoDb.totalPagadoInteres,
 
-  morosidadAdeudada: toNumberOrNull(contrato.morosidadAdeudada) || contratoDb.morosidadAdeudada,
-  totalPagadoMorosidad: toNumberOrNull(contrato.totalPagadoMorosidad) || contratoDb.totalPagadoMorosidad,
-  morosidadTotal: toNumberOrNull(contrato.morosidadTotal) || contratoDb.morosidadTotal,
+  morosidadAdeudada: toNumberOrNull(contrato.morosidadAdeudada) ?? contratoDb.morosidadAdeudada,
+  totalPagadoMorosidad: toNumberOrNull(contrato.totalPagadoMorosidad) ?? contratoDb.totalPagadoMorosidad,
+  morosidadTotal: toNumberOrNull(contrato.morosidadTotal) ?? contratoDb.morosidadTotal,
 };
 
 // actualizar contrato
