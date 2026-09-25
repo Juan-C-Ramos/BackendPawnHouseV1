@@ -4,6 +4,7 @@ const {
   PrendaEmpeno,
   Customer,
   User,
+  Venta,
 } = require("../../models");
 const sequelize = require("../../utils/connection");
 // const generarNumeroContratoEmpeno = require("../../utils/generarNumeroContratoEmpeno");
@@ -117,9 +118,19 @@ exports.getContratoEmpenoById = async (req, res) => {
     const { id } = req.params;
 
     const contrato = await ContratoEmpeno.findByPk(id, {
-      include: [Customer, User, PrendaEmpeno, PagosEmpeños],
-    });
-
+  include: [
+    { model: Customer },
+    { model: User },
+    {
+      model: PrendaEmpeno,
+      include: [
+        {
+          model: Venta, // o PagosEmpeno, según cómo lo hayas exportado
+        },
+      ],
+    },
+  ],
+});
     if (!contrato) {
       return res.status(404).json({ message: "Contrato no encontrado" });
     }
