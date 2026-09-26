@@ -23,7 +23,7 @@ const {
   obtenerPrendasPorContrato,
 } = require("../controllers/ModuloEmpeños/prendaEmpeno.controller")
 
-const {registrarVenta, getPrendasDisponibles} = require("../controllers/ModuloEmpeños/ventas.controller")
+const {registrarVenta, getPrendasDisponibles,getAllVentas, getVentaById, updateVenta} = require("../controllers/ModuloEmpeños/ventas.controller")
 
 
 /*
@@ -40,6 +40,9 @@ router.get(
 
 router.post("/ventas", registrarVenta);
 router.get("/ventas/prendas-disponibles", getPrendasDisponibles);
+router.get("/ventas", getAllVentas);
+router.get("/ventas/:id", getVentaById);
+router.put("/ventas/:id", updateVenta);
 
 router.get("/kpis", obtenerKpisDashboard);
 
