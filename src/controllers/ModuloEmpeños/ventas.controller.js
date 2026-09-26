@@ -153,16 +153,10 @@ exports.getAllVentas = async (req, res) => {
     }
 
     const ventas = await Venta.findAll({
-      where,
       include: [
         {
           model: PrendaEmpeno,
           attributes: ["id", "nombre", "descripcion", "status", "montoAvaluo"],
-          where:
-            search && search.trim() !== ""
-              ? { nombre: { [Op.like]: `%${search.trim()}%` } }
-              : undefined,
-          required: false, // left join para no filtrar ventas sin match si no hay search
         },
         {
           model: ContratoEmpeno,
@@ -171,10 +165,6 @@ exports.getAllVentas = async (req, res) => {
       ],
       order: [["fechaVenta", "DESC"]],
     });
-
-    // Si hay search y usamos required:false, filtramos en JS las que sí hicieron match
-    // Alternativa más limpia si siempre quieres filtrar por nombre de prenda:
-    // cambia required a true cuando haya search
 
     return res.json(ventas);
   } catch (error) {
