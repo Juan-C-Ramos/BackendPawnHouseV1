@@ -193,6 +193,7 @@ exports.getVentaById = async (req, res) => {
     return res.json(venta);
   } catch (error) {
     console.error("Error obteniendo venta:", error);
+    console.log(error);
     return res.status(500).json({
       error: "Error obteniendo venta",
     });
