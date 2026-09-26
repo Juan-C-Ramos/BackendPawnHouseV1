@@ -182,18 +182,7 @@ exports.getVentaById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const venta = await Venta.findByPk(id, {
-      include: [
-        {
-          model: PrendaEmpeno,
-          attributes: ["id", "nombre", "descripcion", "status", "montoAvaluo"],
-        },
-        {
-          model: ContratoEmpeno,
-          attributes: ["id", "numeroContrato"],
-        },
-      ],
-    });
+    const venta = await Venta.findByPk(id);
 
     if (!venta) {
       return res.status(404).json({
