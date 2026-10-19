@@ -14,6 +14,9 @@ const InventoryBill = require("./InventoryBill.js")
 const IdPhoto = require("./IDPhoto.js")
 const Cuotes = require("./Cuote.js")
 const LoginRegister = require("./LoginRegister.js")
+const VentasCredito = require("./VentasCredito.js")  
+const ProductosVentaCredito = require('./ProductosVentaCredito.js');
+
 
 // Importaciones de Empeños
 // Módulo de Empeños
@@ -119,6 +122,17 @@ ProofOfServices.belongsTo(Customer) //proofOfServicesId
 Customer.hasOne(ProofOfServices)
 
 
+// Transaction -> VentasCredito
+Transaction.hasOne(VentasCredito, {
+  foreignKey: 'transactionId',
+  as: 'ventaCredito'          // opcional, pero recomendado
+});
+
+VentasCredito.belongsTo(Transaction, {
+  foreignKey: 'transactionId',
+  as: 'transaction'           // opcional
+});
+
 /////////////////////////////////////////////
 // MODULO DE EMPEÑOS
 /////////////////////////////////////////////
@@ -201,6 +215,20 @@ DisbursementAccount.belongsTo(Transaction, {
 });
 
 
+
+
+// VentasCredito -> Productos
+VentasCredito.hasMany(ProductosVentaCredito, {
+  foreignKey: 'ventasCreditoId',
+  as: 'productos'
+});
+
+ProductosVentaCredito.belongsTo(VentasCredito, {
+  foreignKey: 'ventasCreditoId',
+  as: 'ventaCredito'
+});
+
+
 module.exports = {
   // modelos existentes
   Customer,
@@ -221,6 +249,8 @@ module.exports = {
   LoginRegister,
   HistorialSaldo,
   DisbursementAccount,
+  VentasCredito,  
+  ProductosVentaCredito,
 
   // 🔥 módulo de empeños
   ContratoEmpeno,

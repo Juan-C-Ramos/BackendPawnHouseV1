@@ -701,14 +701,12 @@ const getPaymentsByDate = catchError(async (req, res) => {
     return res.status(400).json({ message: "Debes enviar una fecha" });
   }
 
-  // Ajustar fechas para incluir todo el día
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
   const end = new Date(date);
   end.setHours(23, 59, 59, 999);
 
-  // 1️⃣ Obtener pagos en esa fecha
-  const payments = await Payment.findAll({
+  const paymentsRaw = await Payment.findAll({
     where: {
       paymentDate: {
         [Op.gte]: start,
@@ -724,46 +722,63 @@ const getPaymentsByDate = catchError(async (req, res) => {
     order: [["paymentDate", "DESC"]],
   });
 
-  // 2️⃣ Obtener IDs de pagos para buscar historiales
-  const paymentIds = payments.map(p => p.id);
-
-  // 3️⃣ Obtener historiales asociados a esos pagos
-  const historialSaldos = await HistorialSaldo.findAll({
-    where: { pagoId: paymentIds },
-    order: [['createdAt', 'ASC']]
+  // ❌ Excluir pagos de venta a crédito
+  const payments = paymentsRaw.filter((p) => {
+    const tx = p.transaction || p.Transaction;
+    if (!tx) return true;
+    return (
+      tx.interestsType !== "ventas" &&
+      tx.transactionType !== "venta"
+    );
   });
 
-  // 4️⃣ Función para calcular totales
+  const paymentIds = payments.map((p) => p.id);
+
+  const historialSaldos = await HistorialSaldo.findAll({
+    where: { pagoId: paymentIds },
+    order: [["createdAt", "ASC"]],
+  });
+
   const calculateTotals = (list) => {
     const totals = list.reduce(
       (acc, p) => {
         acc.capital += p.capital || 0;
         acc.itbms += p.itbms || 0;
-        acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        acc.interestsMorosity +=
+          (p.interestAmount || 0) + (p.layPaymentFee || 0);
         return acc;
       },
       { capital: 0, itbms: 0, interestsMorosity: 0 }
     );
 
-    const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+    const allowedMethods = [
+      "efectivo",
+      "aliado",
+      "nacional",
+      "bac",
+      "caja",
+      "mercantil",
+    ];
     const totalsByMethodMap = {};
 
     list.forEach((p) => {
-      const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+      const method = allowedMethods.includes(p.paymentMethod)
+        ? p.paymentMethod
+        : "otro";
       if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
       totalsByMethodMap[method] +=
-        (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+        (p.capital || 0) +
+        (p.itbms || 0) +
+        ((p.interestAmount || 0) + (p.layPaymentFee || 0));
     });
 
-    const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
-      method,
-      total,
-    }));
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(
+      ([method, total]) => ({ method, total })
+    );
 
     return { totals, totalsByMethod, payments: list };
   };
 
-  // 5️⃣ Retornar respuesta
   if (!splitItbms || splitItbms === "false") {
     return res.json({ ...calculateTotals(payments), historialSaldos });
   }
@@ -775,99 +790,33 @@ const getPaymentsByDate = catchError(async (req, res) => {
     payments,
     withITBMS: {
       ...calculateTotals(withItbms),
-      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId))
+      historialSaldos: historialSaldos.filter((h) =>
+        withItbms.map((p) => p.id).includes(h.pagoId)
+      ),
     },
     withoutITBMS: {
       ...calculateTotals(withoutItbms),
-      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId))
+      historialSaldos: historialSaldos.filter((h) =>
+        withoutItbms.map((p) => p.id).includes(h.pagoId)
+      ),
     },
   });
 });
-
-
-/**
- * Obtener pagos en un rango de fechas (paymentDate)
- * Query params: ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&splitItbms=true/false
- */
-// const getPaymentsByDateRange = catchError(async (req, res) => {
-//   const { startDate, endDate, splitItbms } = req.query;
-
-//   if (!startDate || !endDate) {
-//     return res.status(400).json({ message: "Debes enviar startDate y endDate en formato YYYY-MM-DD" });
-//   }
-
-//   const payments = await Payment.findAll({
-//     where: {
-//       paymentDate: {
-//         [Op.gte]: new Date(startDate),
-//         [Op.lte]: new Date(endDate),
-//       },
-//     },
-//     include: [
-//       {
-//         model: Transaction,
-//         include: [Customer, Payment],
-//       },
-//     ],
-//     order: [["paymentDate", "DESC"]],
-//   });
-
-//   const calculateTotals = (list) => {
-//     const totals = list.reduce(
-//       (acc, p) => {
-//         acc.capital += p.capital || 0;
-//         acc.itbms += p.itbms || 0;
-//         acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
-//         return acc;
-//       },
-//       { capital: 0, itbms: 0, interestsMorosity: 0 }
-//     );
-
-//     const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
-//     const totalsByMethodMap = {};
-
-//     list.forEach((p) => {
-//       const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
-//       if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
-//       totalsByMethodMap[method] +=
-//         (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.layPaymentFee || 0));
-//     });
-
-//     const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
-//       method,
-//       total,
-//     }));
-
-//     return { totals, totalsByMethod, payments };
-//   };
-
-//   if (!splitItbms || splitItbms === "false") {
-//     return res.json(calculateTotals(payments));
-//   }
-
-//   const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
-//   const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
-
-//   return res.json({
-//     withITBMS: calculateTotals(withItbms),
-//     withoutITBMS: calculateTotals(withoutItbms), payments
-//   });
-// });
 
 const getPaymentsByDateRange = catchError(async (req, res) => {
   const { startDate, endDate, splitItbms } = req.query;
 
   if (!startDate || !endDate) {
-    return res.status(400).json({ message: "Debes enviar startDate y endDate en formato YYYY-MM-DD" });
+    return res.status(400).json({
+      message: "Debes enviar startDate y endDate en formato YYYY-MM-DD",
+    });
   }
 
-  // Ajustar fechas para incluir todo el día final
   const start = new Date(startDate);
   const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999); // incluye todo el día final
+  end.setHours(23, 59, 59, 999);
 
-  // 1️⃣ Obtener pagos en el rango de fechas
-  const payments = await Payment.findAll({
+  const paymentsRaw = await Payment.findAll({
     where: {
       paymentDate: {
         [Op.gte]: start,
@@ -883,46 +832,63 @@ const getPaymentsByDateRange = catchError(async (req, res) => {
     order: [["paymentDate", "DESC"]],
   });
 
-  // 2️⃣ Obtener IDs de pagos para buscar historiales
-  const paymentIds = payments.map(p => p.id);
-
-  // 3️⃣ Obtener historiales asociados a esos pagos
-  const historialSaldos = await HistorialSaldo.findAll({
-    where: { pagoId: paymentIds },
-    order: [['createdAt', 'ASC']]
+  // ❌ Excluir pagos de venta a crédito
+  const payments = paymentsRaw.filter((p) => {
+    const tx = p.transaction || p.Transaction;
+    if (!tx) return true;
+    return (
+      tx.interestsType !== "ventas" &&
+      tx.transactionType !== "venta"
+    );
   });
 
-  // 4️⃣ Función para calcular totales
+  const paymentIds = payments.map((p) => p.id);
+
+  const historialSaldos = await HistorialSaldo.findAll({
+    where: { pagoId: paymentIds },
+    order: [["createdAt", "ASC"]],
+  });
+
   const calculateTotals = (list) => {
     const totals = list.reduce(
       (acc, p) => {
         acc.capital += p.capital || 0;
         acc.itbms += p.itbms || 0;
-        acc.interestsMorosity += (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        acc.interestsMorosity +=
+          (p.interestAmount || 0) + (p.layPaymentFee || 0);
         return acc;
       },
       { capital: 0, itbms: 0, interestsMorosity: 0 }
     );
 
-    const allowedMethods = ["efectivo", "aliado", "nacional", "bac", "caja", "mercantil"];
+    const allowedMethods = [
+      "efectivo",
+      "aliado",
+      "nacional",
+      "bac",
+      "caja",
+      "mercantil",
+    ];
     const totalsByMethodMap = {};
 
     list.forEach((p) => {
-      const method = allowedMethods.includes(p.paymentMethod) ? p.paymentMethod : "otro";
+      const method = allowedMethods.includes(p.paymentMethod)
+        ? p.paymentMethod
+        : "otro";
       if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
       totalsByMethodMap[method] +=
-        (p.capital || 0) + (p.itbms || 0) + ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+        (p.capital || 0) +
+        (p.itbms || 0) +
+        ((p.interestAmount || 0) + (p.layPaymentFee || 0));
     });
 
-    const totalsByMethod = Object.entries(totalsByMethodMap).map(([method, total]) => ({
-      method,
-      total,
-    }));
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(
+      ([method, total]) => ({ method, total })
+    );
 
     return { totals, totalsByMethod, payments: list };
   };
 
-  // 5️⃣ Retornar respuesta
   if (!splitItbms || splitItbms === "false") {
     return res.json({ ...calculateTotals(payments), historialSaldos });
   }
@@ -934,11 +900,235 @@ const getPaymentsByDateRange = catchError(async (req, res) => {
     payments,
     withITBMS: {
       ...calculateTotals(withItbms),
-      historialSaldos: historialSaldos.filter(h => withItbms.map(p => p.id).includes(h.pagoId))
+      historialSaldos: historialSaldos.filter((h) =>
+        withItbms.map((p) => p.id).includes(h.pagoId)
+      ),
     },
     withoutITBMS: {
       ...calculateTotals(withoutItbms),
-      historialSaldos: historialSaldos.filter(h => withoutItbms.map(p => p.id).includes(h.pagoId))
+      historialSaldos: historialSaldos.filter((h) =>
+        withoutItbms.map((p) => p.id).includes(h.pagoId)
+      ),
+    },
+  });
+});
+
+const getPaymentsVentaByDate = catchError(async (req, res) => {
+  const { date } = req.params;
+  const { splitItbms } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ message: "Debes enviar una fecha" });
+  }
+
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+
+  const paymentsRaw = await Payment.findAll({
+    where: {
+      paymentDate: {
+        [Op.gte]: start,
+        [Op.lte]: end,
+      },
+    },
+    include: [
+      {
+        model: Transaction,
+        include: [Customer, Payment],
+      },
+    ],
+    order: [["paymentDate", "DESC"]],
+  });
+
+  // ✅ Solo pagos de venta a crédito
+  const payments = paymentsRaw.filter((p) => {
+    const tx = p.transaction || p.Transaction;
+    if (!tx) return false;
+    return (
+      tx.interestsType === "ventas" ||
+      tx.transactionType === "venta"
+    );
+  });
+
+  const paymentIds = payments.map((p) => p.id);
+
+  const historialSaldos = await HistorialSaldo.findAll({
+    where: { pagoId: paymentIds },
+    order: [["createdAt", "ASC"]],
+  });
+
+  const calculateTotals = (list) => {
+    const totals = list.reduce(
+      (acc, p) => {
+        acc.capital += p.capital || 0;
+        acc.itbms += p.itbms || 0;
+        acc.interestsMorosity +=
+          (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        return acc;
+      },
+      { capital: 0, itbms: 0, interestsMorosity: 0 }
+    );
+
+    const allowedMethods = [
+      "efectivo",
+      "aliado",
+      "nacional",
+      "bac",
+      "caja",
+      "mercantil",
+    ];
+    const totalsByMethodMap = {};
+
+    list.forEach((p) => {
+      const method = allowedMethods.includes(p.paymentMethod)
+        ? p.paymentMethod
+        : "otro";
+      if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+      totalsByMethodMap[method] +=
+        (p.capital || 0) +
+        (p.itbms || 0) +
+        ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+    });
+
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(
+      ([method, total]) => ({ method, total })
+    );
+
+    return { totals, totalsByMethod, payments: list };
+  };
+
+  if (!splitItbms || splitItbms === "false") {
+    return res.json({ ...calculateTotals(payments), historialSaldos });
+  }
+
+  const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
+  const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
+
+  return res.json({
+    payments,
+    withITBMS: {
+      ...calculateTotals(withItbms),
+      historialSaldos: historialSaldos.filter((h) =>
+        withItbms.map((p) => p.id).includes(h.pagoId)
+      ),
+    },
+    withoutITBMS: {
+      ...calculateTotals(withoutItbms),
+      historialSaldos: historialSaldos.filter((h) =>
+        withoutItbms.map((p) => p.id).includes(h.pagoId)
+      ),
+    },
+  });
+});
+
+const getPaymentsVentaByDateRange = catchError(async (req, res) => {
+  const { startDate, endDate, splitItbms } = req.query;
+
+  if (!startDate || !endDate) {
+    return res.status(400).json({
+      message: "Debes enviar startDate y endDate en formato YYYY-MM-DD",
+    });
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  const paymentsRaw = await Payment.findAll({
+    where: {
+      paymentDate: {
+        [Op.gte]: start,
+        [Op.lte]: end,
+      },
+    },
+    include: [
+      {
+        model: Transaction,
+        include: [Customer, Payment],
+      },
+    ],
+    order: [["paymentDate", "DESC"]],
+  });
+
+  // ✅ Solo pagos de venta a crédito
+  const payments = paymentsRaw.filter((p) => {
+    const tx = p.transaction || p.Transaction;
+    if (!tx) return false;
+    return (
+      tx.interestsType === "ventas" ||
+      tx.transactionType === "venta"
+    );
+  });
+
+  const paymentIds = payments.map((p) => p.id);
+
+  const historialSaldos = await HistorialSaldo.findAll({
+    where: { pagoId: paymentIds },
+    order: [["createdAt", "ASC"]],
+  });
+
+  const calculateTotals = (list) => {
+    const totals = list.reduce(
+      (acc, p) => {
+        acc.capital += p.capital || 0;
+        acc.itbms += p.itbms || 0;
+        acc.interestsMorosity +=
+          (p.interestAmount || 0) + (p.layPaymentFee || 0);
+        return acc;
+      },
+      { capital: 0, itbms: 0, interestsMorosity: 0 }
+    );
+
+    const allowedMethods = [
+      "efectivo",
+      "aliado",
+      "nacional",
+      "bac",
+      "caja",
+      "mercantil",
+    ];
+    const totalsByMethodMap = {};
+
+    list.forEach((p) => {
+      const method = allowedMethods.includes(p.paymentMethod)
+        ? p.paymentMethod
+        : "otro";
+      if (!totalsByMethodMap[method]) totalsByMethodMap[method] = 0;
+      totalsByMethodMap[method] +=
+        (p.capital || 0) +
+        (p.itbms || 0) +
+        ((p.interestAmount || 0) + (p.layPaymentFee || 0));
+    });
+
+    const totalsByMethod = Object.entries(totalsByMethodMap).map(
+      ([method, total]) => ({ method, total })
+    );
+
+    return { totals, totalsByMethod, payments: list };
+  };
+
+  if (!splitItbms || splitItbms === "false") {
+    return res.json({ ...calculateTotals(payments), historialSaldos });
+  }
+
+  const withItbms = payments.filter((p) => (p.itbms || 0) > 0);
+  const withoutItbms = payments.filter((p) => (p.itbms || 0) === 0);
+
+  return res.json({
+    payments,
+    withITBMS: {
+      ...calculateTotals(withItbms),
+      historialSaldos: historialSaldos.filter((h) =>
+        withItbms.map((p) => p.id).includes(h.pagoId)
+      ),
+    },
+    withoutITBMS: {
+      ...calculateTotals(withoutItbms),
+      historialSaldos: historialSaldos.filter((h) =>
+        withoutItbms.map((p) => p.id).includes(h.pagoId)
+      ),
     },
   });
 });
@@ -1122,4 +1312,6 @@ module.exports = {
   getPaymentsByDate,
   getPaymentsByDateRange,
   createAmortizado,
+  getPaymentsVentaByDate,
+  getPaymentsVentaByDateRange,
 };

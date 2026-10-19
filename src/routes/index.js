@@ -21,15 +21,20 @@ const routerRefinanciamientos = require('./refinanciamientos.router.js');
 const routerEmpenos = require ('./empeños.router.js')
 const router = express.Router();
 const pagosEmpenoRouter = require('./pagosEmpeno.router.js');
-
 const routerDeclaracion = require('./declaracion.router.js');
-
 const routerContratoPDF = require("./contratoPdf.router");
 const pagosEmpenos = require("./reciboPago.routes.js");
-
 const reporteIngresos = require("./reportesEmpenos.routes.js");
 const amortizedLoanRouter = require('./amortizedLoan.router');
 const adminRouter = require('./admin.router.js');
+const ventasCreditoRouter = require('./ventasCredito.routes.js');
+const routerContrato = require('./contratos.router.js');
+
+router.use('/contratos', routerContrato);
+
+
+// Rutas de ventas a crédito
+router.use('/ventas-credito', ventasCreditoRouter);
 
 router.use('/amortized-loans', amortizedLoanRouter);
 

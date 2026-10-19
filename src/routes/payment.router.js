@@ -15,8 +15,15 @@ const {
   getAllPaymentUser,
   getPaymentsByDate,         // ✅ nuevo
   getPaymentsByDateRange,     // ✅ nuevo
-  createAmortizado
+  createAmortizado,
+  getPaymentsVentaByDate,        // ✅ nuevo
+  getPaymentsVentaByDateRange,
 } = require('../controllers/payment.controller.js');
+
+const {
+  generarReciboPagoVentaCreditoPDF,
+} = require("../controllers/reciboPagoVentaCredito.controller.js");
+// ajusta la ruta del require según tu carpeta real
 
 const express = require('express');
 const { verifyJwt } = require('../utils/verifyJWT');
@@ -96,6 +103,23 @@ routerPayment.get(
   "/recibo-prestamo/:pagoId",
   generarReciboPagoPrestamoPDF
 );
+
+routerPayment.get(
+  "/recibo-venta/:pagoId",
+  generarReciboPagoVentaCreditoPDF
+);
+
+// ------------------------
+// 🔹 Pagos de VENTA A CRÉDITO
+// ------------------------
+
+// GET /payments/venta/byDate/2026-08-18?splitItbms=true
+routerPayment.route('/venta/byDate/:date')
+  .get(getPaymentsVentaByDate);
+
+// GET /payments/venta/byDateRange?startDate=2026-08-01&endDate=2026-08-31&splitItbms=true
+routerPayment.route('/venta/byDateRange')
+  .get(getPaymentsVentaByDateRange);
 
 // ------------------------
 // 🔹 CRUD por ID
