@@ -88,9 +88,9 @@ const generarContratoPrestamoCuotaFijaPDF = async (req, res) => {
       return res.status(404).json({ message: "Transacción no encontrada" });
     }
 
-    if (transaction.transactionType !== "prestamos") {
+    if (transaction.transactionType !== "prestamos" && transaction.transactionType !== "refinanciamiento") {
       return res.status(400).json({
-        message: `Esta transacción es de tipo "${transaction.transactionType}". Este contrato solo aplica a préstamos.`,
+        message: `Esta transacción es de tipo "${transaction.transactionType}". Este contrato solo aplica a préstamos y refinanciamiento.`,
       });
     }
 

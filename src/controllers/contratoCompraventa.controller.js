@@ -143,8 +143,8 @@ const generarContratoCompraventaFinanciamientoPDF = async (req, res) => {
         .join(", ") || "_______________________________________";
 
     const numeroContrato =
-      transaction.contractNumber ||
       ventaCredito.ventaCreditoNumero ||
+      transaction.contractNumber ||
       `VC-${transaction.id}`;
     const facturaNo = ventaCredito.facturaNumero || "________";
 
