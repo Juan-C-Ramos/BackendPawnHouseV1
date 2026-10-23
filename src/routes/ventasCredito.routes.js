@@ -11,7 +11,8 @@ const {
   update,
   remove,
   search,
-  reportes
+  reportes,
+  reportesPagos
 } = require('../controllers/ventasCredito.controller.js'); // ajusta la ruta si es necesario
 
 // Crear (Transaction + VentasCredito + Cuotas + DisbursementAccount)
@@ -22,7 +23,10 @@ router.get('/', getAll);
 
 router.get("/search", search); // Endpoint para buscar ventas a crédito por nombre del cliente
 
+router.get("/reportes/pagos", reportesPagos);
+
 router.get("/reportes", reportes);
+
 
 // Obtener venta a crédito por transactionId
 router.get('/transaction/:transactionId', getByTransactionId);

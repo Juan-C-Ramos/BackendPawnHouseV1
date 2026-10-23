@@ -16,6 +16,7 @@ const Cuotes = require("./Cuote.js")
 const LoginRegister = require("./LoginRegister.js")
 const VentasCredito = require("./VentasCredito.js")  
 const ProductosVentaCredito = require('./ProductosVentaCredito.js');
+const PaymentUsers = require("./PaymentsUsers.js")
 
 
 // Importaciones de Empeños
@@ -257,4 +258,5 @@ module.exports = {
   PrendaEmpeno,
   Pagos,
   Venta,
+  PaymentUsers
 }

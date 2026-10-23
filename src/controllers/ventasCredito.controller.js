@@ -6,7 +6,8 @@ const {
   Customer,
   User,
   Payment,
-  DisbursementAccount
+  DisbursementAccount,
+  PaymentUsers
 } = require('../models'); // ajusta la ruta según tu proyecto
 const sequelize = require('../utils/connection');
 
@@ -760,6 +761,179 @@ const reportes = async (req, res) => {
   }
 };
 
+// =====================
+// REPORTES — PAGOS
+// GET /ventas-credito/reportes/pagos?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+// =====================
+const reportesPagos = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        message: "startDate y endDate son requeridos (YYYY-MM-DD)",
+      });
+    }
+
+    const inicio = new Date(`${startDate}T00:00:00.000`);
+    const fin = new Date(`${endDate}T23:59:59.999`);
+
+    if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+      return res.status(400).json({
+        message: "Fechas inválidas. Usa formato YYYY-MM-DD",
+      });
+    }
+
+    if (inicio > fin) {
+      return res.status(400).json({
+        message: "startDate no puede ser mayor que endDate",
+      });
+    }
+
+    // 1) Pagos en el rango (solo transacciones tipo venta)
+    const pagos = await Payment.findAll({
+      where: {
+        paymentDate: {
+          [Op.between]: [inicio, fin],
+        },
+      },
+      include: [
+        {
+          model: Transaction,
+          as: "transaction", // ajusta alias si es distinto
+          required: true,
+          where: {
+            transactionType: "venta",
+          },
+          include: [
+            {
+              model: Customer,
+              as: "customer", // ajusta alias si es distinto
+              required: false,
+              attributes: [
+                "id",
+                "firstName",
+                "lastName",
+                "numberID",
+                "phone",
+                "email",
+              ],
+            },
+            {
+              model: VentasCredito,
+              as: "ventaCredito", // ajusta alias si es distinto
+              required: false,
+              attributes: [
+                "id",
+                "facturaNumero",
+                "ventaCreditoNumero",
+                "nombre",
+                "estado",
+                "montoFinanciado",
+                "abonoInicial",
+                "saldoCapital",
+              ],
+            },
+          ],
+        },
+      ],
+      order: [
+        ["paymentDate", "ASC"],
+        ["id", "ASC"],
+      ],
+    });
+
+    const paymentIds = pagos.map((p) => p.id).filter(Boolean);
+
+    // 2) Usuarios vía tabla intermedia paymentUsers (sin asociación Sequelize)
+    let usersByPaymentId = {};
+
+    if (paymentIds.length > 0) {
+      const links = await PaymentUsers.findAll({
+        where: {
+          paymentId: { [Op.in]: paymentIds },
+        },
+        attributes: ["paymentId", "userId"],
+        raw: true,
+      });
+
+      const userIds = [...new Set(links.map((l) => l.userId).filter(Boolean))];
+
+      let usersMap = {};
+      if (userIds.length > 0) {
+        const users = await User.findAll({
+          where: { id: { [Op.in]: userIds } },
+          attributes: ["id", "firstName", "lastName"],
+        });
+        users.forEach((u) => {
+          const plain = u.toJSON ? u.toJSON() : u;
+          usersMap[plain.id] = plain;
+        });
+      }
+
+      // Un pago podría tener más de un user en paymentUsers;
+      // tomamos el primero (o puedes devolver un array)
+      links.forEach((l) => {
+        if (!usersByPaymentId[l.paymentId] && usersMap[l.userId]) {
+          usersByPaymentId[l.paymentId] = usersMap[l.userId];
+        }
+      });
+    }
+
+    // 3) Normalizar respuesta para el front
+    const data = pagos.map((p) => {
+      const plain = p.toJSON ? p.toJSON() : p;
+      const tx = plain.transaction || {};
+      const customer = tx.customer || plain.customer || {};
+      const venta =
+        tx.ventaCredito ||
+        tx.ventasCredito ||
+        plain.ventaCredito ||
+        plain.ventasCredito ||
+        {};
+
+      const user = usersByPaymentId[plain.id] || null;
+
+      return {
+        id: plain.id,
+        paymentDate: plain.paymentDate,
+        paymentMethod: plain.paymentMethod,
+        amount: Number(plain.amount) || 0,
+        capital: Number(plain.capital) || 0,
+        interestAmount: Number(plain.interestAmount) || 0,
+        layPaymentFee: Number(plain.layPaymentFee) || 0,
+        itbms: Number(plain.itbms) || 0,
+        transactionId: plain.transactionId || tx.id,
+        userId: user?.id || null,
+        customer,
+        clienteNombre:
+          `${customer.firstName || ""} ${customer.lastName || ""}`.trim() ||
+          venta.nombre ||
+          null,
+        facturaNumero: venta.facturaNumero || null,
+        ventaCreditoNumero: venta.ventaCreditoNumero || null,
+        transaction: {
+          id: tx.id,
+          contractNumber: tx.contractNumber,
+          status: tx.status,
+          balance: tx.balance,
+          customer,
+        },
+        ventaCredito: venta,
+        user,
+      };
+    });
+
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("Error en reportesPagos:", error);
+    return res.status(500).json({
+      message: "Error interno al obtener el informe de pagos",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   create,
   getAll,
@@ -768,5 +942,6 @@ module.exports = {
   update,
   remove,
   search,
-  reportes
+  reportes,
+  reportesPagos
 };                                                                                                                                                           
