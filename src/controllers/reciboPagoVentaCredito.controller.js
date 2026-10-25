@@ -8,6 +8,7 @@ const {
   Customer,
   User,
   Cuotes,
+  VentasCredito
 } = require("../models");
 
 const HistorialSaldo = require("../models/HistorialSaldo");
@@ -17,6 +18,7 @@ const generarReciboPagoVentaCreditoPDF = async (req, res) => {
   try {
     const { pagoId } = req.params;
 
+    
     const pago = await Payment.findByPk(pagoId, {
       include: [
         {
@@ -27,12 +29,15 @@ const generarReciboPagoVentaCreditoPDF = async (req, res) => {
               model: Cuotes,
               as: "transactionCuotes",
               required: false,
-            },
+            }
           ],
         },
       ],
     });
-
+    const ventaCredito = await VentasCredito.findOne({
+      where:{transactionId: pago.transactionId}
+    })
+    
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
     }
@@ -116,7 +121,7 @@ const generarReciboPagoVentaCreditoPDF = async (req, res) => {
     doc.fontSize(10).font("Helvetica");
 
     doc.text(`RECIBO N°: ${pago.id}`);
-    doc.text(`CONTRATO: ${transaccion?.contractNumber || "-"}`);
+    doc.text(`CONTRATO: ${ventaCredito?.ventaCreditoNumero || "-"}`);
     doc.text(`FECHA: ${pago.paymentDate}`);
     doc.moveDown(0.5);
 
