@@ -12,34 +12,72 @@ const DisbursementAccount = require('../models/DisbursementAccount');
 const sequelize = require('../utils/connection');
 
 // 🔥 generar cuotas desde tabla amortizada
-const generarCuotas = async ({
-  transaction,
-  amortizationTable,
-  t,
-}) => {
+/** Formato YYYY-MM-DD sin desfase de zona horaria */
+const toDateOnly = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+/**
+ * Parsea YYYY-MM-DD o Date a Date local (mediodía para evitar saltos de día).
+ */
+const parseLocalDate = (value) => {
+  if (!value) return new Date();
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12, 0, 0);
+  }
+  const s = String(value).slice(0, 10);
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
+};
+
+/**
+ * Siguiente fecha de cuota quincenal:
+ * - si el día < 15  → día 15 del mismo mes
+ * - si el día === 15 → último día del mismo mes
+ * - si el día > 15  → día 15 del mes siguiente
+ */
+const siguienteFechaCuota = (fechaAnterior) => {
+  const d = parseLocalDate(fechaAnterior);
+  const day = d.getDate();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+
+  if (day < 15) {
+    return new Date(year, month, 15, 12, 0, 0);
+  }
+  if (day === 15) {
+    // último día del mes actual
+    return new Date(year, month + 1, 0, 12, 0, 0);
+  }
+  // fin de mes → 15 del mes siguiente
+  return new Date(year, month + 1, 15, 12, 0, 0);
+};
+
+const generarCuotas = async ({ transaction, amortizationTable, t }) => {
   const cuotas = [];
+
+  // 1ª cuota: nextPaymentDate de la transacción
+  let fechaCuota = parseLocalDate(transaction.nextPaymentDate);
 
   for (const row of amortizationTable) {
     cuotas.push({
       cuoteNumber: row.numeroCuota.toString(),
-
       amount: row.cuota,
-
       capitalAmount: row.capital,
-
       amountInterest: row.interes,
-
-      paymentCutDate: transaction.nextPaymentDate,
-
+      paymentCutDate: toDateOnly(fechaCuota),
       transactionId: transaction.id,
-
-      status: 'notPaid',
+      status: "notPaid",
     });
+
+    // siguientes: 15 o fin de mes respecto a la anterior
+    fechaCuota = siguienteFechaCuota(fechaCuota);
   }
 
-  await Cuotes.bulkCreate(cuotas, {
-    transaction: t,
-  });
+  await Cuotes.bulkCreate(cuotas, { transaction: t });
 };
 
 // 🔥 crear préstamo amortizado

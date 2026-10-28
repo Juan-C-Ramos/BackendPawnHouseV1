@@ -32,7 +32,7 @@ function formatearFechaCorta(fecha) {
 
 function numeroALetras(num) {
   if (num === undefined || num === null || isNaN(Number(num))) return "_______________";
-  const n = Math.floor(Number(num));
+  const n = Math.floor(Math.abs(Number(num)));
   if (n === 0) return "CERO";
 
   const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
@@ -62,6 +62,23 @@ function numeroALetras(num) {
     return milesStr + (resto ? " " + numeroALetras(resto) : "");
   }
   return n.toString();
+}
+
+function toFixed2(val) {
+  return Number(val || 0).toFixed(2);
+}
+
+/** Ej: 1500.75 → "MIL QUINIENTOS BALBOAS CON 75/100" */
+function montoALetras(num) {
+  if (num === undefined || num === null || isNaN(Number(num))) {
+    return "_______________ BALBOAS CON __/100";
+  }
+  const valor = Math.abs(Number(num));
+  const entero = Math.floor(valor);
+  const centavos = Math.round((valor - entero) * 100);
+  const centavosStr = String(centavos).padStart(2, "0");
+
+  return `${numeroALetras(entero)} BALBOAS CON ${centavosStr}/100`.toUpperCase();
 }
 
 function toFixed2(val) {
@@ -119,8 +136,8 @@ const generarContratoPrestamoPorcentajePDF = async (req, res) => {
         .join(", ") || "______________________________";
 
     const capital = Number(transaction.amonunt || transaction.capital || 0);
-    const capitalStr = toFixed2(capital);
-    const capitalLetras = `${numeroALetras(capital)} BALBOAS`.toUpperCase();
+const capitalStr = toFixed2(capital);
+const capitalLetras = montoALetras(capital); // ← incluye decimales
 
     const tasaInteres = Number(transaction.interestsPorcent || 0);
     const tasaStr = tasaInteres.toString();
@@ -473,7 +490,7 @@ const generarContratoPrestamoPorcentajePDF = async (req, res) => {
       let y = 120;
       doc.fontSize(9.5).font("Helvetica");
 
-      const montoLetras = `${capitalLetras} CON 00/100`.toUpperCase();
+      const montoLetras = `${capitalLetras} `.toUpperCase();
 
       const pagareIntro = `Por medio del presente PAGARÉ A LA VISTA, yo, ${nombreCompleto}, mayor de edad, portador de la cédula de identidad personal No. ${cedula}, PROMETO PURA Y SIMPLEMENTE PAGAR A LA ORDEN DE LIR TECNOLOGIA A LA VANGUARDIA, S.A., sociedad con RUC 155657158-2-2017, D.V. 56, la suma de ${montoLetras} (B/.${capitalStr}).`;
 

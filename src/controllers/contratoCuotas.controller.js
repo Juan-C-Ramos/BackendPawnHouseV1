@@ -32,7 +32,7 @@ function formatearFechaCorta(fecha) {
 
 function numeroALetras(num) {
   if (num === undefined || num === null || isNaN(Number(num))) return "_______________";
-  const n = Math.floor(Number(num));
+  const n = Math.floor(Math.abs(Number(num)));
   if (n === 0) return "CERO";
 
   const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
@@ -62,6 +62,23 @@ function numeroALetras(num) {
     return milesStr + (resto ? " " + numeroALetras(resto) : "");
   }
   return n.toString();
+}
+
+function toFixed2(val) {
+  return Number(val || 0).toFixed(2);
+}
+
+/** Ej: 1500.75 → "MIL QUINIENTOS BALBOAS CON 75/100" */
+function montoALetras(num) {
+  if (num === undefined || num === null || isNaN(Number(num))) {
+    return "_______________ BALBOAS CON __/100";
+  }
+  const valor = Math.abs(Number(num));
+  const entero = Math.floor(valor);
+  const centavos = Math.round((valor - entero) * 100);
+  const centavosStr = String(centavos).padStart(2, "0");
+
+  return `${numeroALetras(entero)} BALBOAS CON ${centavosStr}/100`.toUpperCase();
 }
 
 function toFixed2(val) {
@@ -119,8 +136,8 @@ const generarContratoPrestamoCuotaFijaPDF = async (req, res) => {
         .join(", ") || "______________________________";
 
     const capital = Number(transaction.amonunt || transaction.capital || 0);
-    const capitalStr = toFixed2(capital);
-    const capitalLetras = `${numeroALetras(capital)} BALBOAS`.toUpperCase();
+const capitalStr = toFixed2(capital);
+const capitalLetras = montoALetras(capital); // ← incluye decimales
 
     const tasaInteres = Number(transaction.interestsPorcent || 0);
     const tasaStr = tasaInteres.toString();
@@ -134,7 +151,7 @@ const generarContratoPrestamoCuotaFijaPDF = async (req, res) => {
 
     const montoTotalObligacion = capital + montoIntereses;
     const montoTotalStr = toFixed2(montoTotalObligacion);
-    const montoTotalLetras = `${numeroALetras(montoTotalObligacion)} BALBOAS`.toUpperCase();
+    const montoTotalLetras = montoALetras(montoTotalObligacion);
 
     const fechaInicio = transaction.startDate
       ? new Date(transaction.startDate)
@@ -145,18 +162,19 @@ const generarContratoPrestamoCuotaFijaPDF = async (req, res) => {
     const fechaInicioStr = formatearFechaCorta(transaction.startDate);
 
     let fechaVencimientoStr = formatearFechaCorta(transaction.endDate);
-    let fechaUltimaLarga = formatearFechaLarga(transaction.endDate);
+let fechaUltimaLarga = formatearFechaLarga(transaction.endDate);
 
-    if (transaction.transactionCuotes?.length > 0) {
-      const ordenadas = [...transaction.transactionCuotes].sort(
-        (a, b) => new Date(a.paymentCutDate) - new Date(b.paymentCutDate)
-      );
-      const ultima = ordenadas[ordenadas.length - 1].paymentCutDate;
-      if (!transaction.endDate) {
-        fechaVencimientoStr = formatearFechaCorta(ultima);
-        fechaUltimaLarga = formatearFechaLarga(ultima);
-      }
-    }
+// Siempre priorizar la fecha de la ÚLTIMA cuota
+if (transaction.transactionCuotes?.length > 0) {
+  const ordenadas = [...transaction.transactionCuotes].sort(
+    (a, b) => new Date(a.paymentCutDate) - new Date(b.paymentCutDate)
+  );
+  const ultima = ordenadas[ordenadas.length - 1].paymentCutDate;
+  if (ultima) {
+    fechaVencimientoStr = formatearFechaCorta(ultima);
+    fechaUltimaLarga = formatearFechaLarga(ultima);
+  }
+}
 
     const numeroContrato = transaction.contractNumber || `CF-${transaction.id}`;
 
@@ -491,7 +509,7 @@ const generarContratoPrestamoCuotaFijaPDF = async (req, res) => {
       let y = 120;
       doc.fontSize(9.5).font("Helvetica");
 
-      const montoLetras = `${montoTotalLetras} CON 00/100`.toUpperCase();
+      const montoLetras = `${montoTotalLetras}`.toUpperCase();
 
       const pagareIntro = `Por medio del presente PAGARÉ A LA VISTA, yo, ${nombreCompleto}, mayor de edad, portador de la cédula de identidad personal No. ${cedula}, PROMETO PURA Y SIMPLEMENTE PAGAR A LA ORDEN DE LIR TECNOLOGIA A LA VANGUARDIA, S.A., sociedad con RUC 155657158-2-2017, D.V. 56, la suma de ${montoLetras} (B/.${montoTotalStr}).`;
 
