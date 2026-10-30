@@ -1219,7 +1219,7 @@ const createAmortizado = catchError(async (req, res) => {
       );
     }
 
-    // =========================
+        // =========================
     // Recalcular capital pendiente
     // =========================
     const capitalPendiente = preview.cuotas.reduce(
@@ -1231,9 +1231,22 @@ const createAmortizado = catchError(async (req, res) => {
       (c) => c.status !== "paid"
     );
 
+    const moraAplicada = Number(preview.mora || 0);
+    const moraActual = Number(transaction.morosidadAmount || 0);
+    const nuevaMora = Math.max(
+      0,
+      Number((moraActual - moraAplicada).toFixed(2))
+    );
+
     const nuevaData = {
       capital: Number(capitalPendiente.toFixed(2)),
+      morosidadAmount: nuevaMora,
     };
+
+    // Si usas balance como capital + mora (opcional)
+    // nuevaData.balance = Number(
+    //   (nuevaData.capital + nuevaData.morosidadAmount).toFixed(2)
+    // );
 
     nuevaData.nextPaymentDate = getNextPaymentDate(
       transaction.nextPaymentDate,
@@ -1243,6 +1256,11 @@ const createAmortizado = catchError(async (req, res) => {
     if (cuotasPendientes.length === 0) {
       nuevaData.status = "paid";
       nuevaData.capital = 0;
+      // si liquidó todo, la mora también debería quedar en 0
+      // (solo si realmente se pagó toda; si no, deja nuevaMora)
+      if (nuevaMora === 0) {
+        nuevaData.morosidadAmount = 0;
+      }
     }
 
     await transaction.update(nuevaData, {

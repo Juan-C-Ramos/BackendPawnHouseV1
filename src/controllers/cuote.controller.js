@@ -29,6 +29,8 @@ const remove = catchError(async(req, res) => {
 
 const update = catchError(async(req, res) => {
     const { id } = req.params;
+    console.log(req.body);
+    console.log(id);
     const result = await Cuote.update(
         req.body,
         { where: {id}, returning: true }

@@ -62,7 +62,7 @@ router.use('/users', routerUser),
 router.use('/categories', routerCategory),
 router.use('/roles', routerRole),
 router.use('/branches',verifyJwt, routerBranch),
-router.use('/coutes',verifyJwt, routerCuote)
+router.use('/coutes', routerCuote)
 router.use('/loginRegisters',verifyJwt, routerLoginRegister)
 router.use('/refinanciamientos',verifyJwt, routerRefinanciamientos);
 
