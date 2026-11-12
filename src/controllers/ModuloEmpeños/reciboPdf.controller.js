@@ -204,8 +204,12 @@ doc.text(`B/. ${Number(pago.montoMorosidadNuevo || 0).toFixed(2)}`, {
     doc.moveDown(0.3);
     doc.fontSize(8).font("Helvetica");
     doc.text("RECIBIDO POR", { align: "center" });
-    doc.text(`${usuario.firstName} ${usuario.lastName}`, { align: "center" });
+const nombre = [usuario.firstName, usuario.lastName]
+  .filter(Boolean)          // quita los valores falsy (undefined, null, "")
+  .join(" ")
+  .trim();
 
+doc.text(nombre || "---", { align: "center" });
     doc.end();
   } catch (error) {
     console.error(error);
