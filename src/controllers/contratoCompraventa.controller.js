@@ -178,7 +178,7 @@ const generarContratoCompraventaFinanciamientoPDF = async (req, res) => {
       ventaCredito.financiamientoTotal || ventaCredito.precioContadoTotal
     );
     const abonoInicial = toFixed2(ventaCredito.abonoInicial);
-    const otrosCargos = toFixed2(transaction.interestAmount || 0);
+    const otrosCargos = toFixed2(0);
     const montoAFinanciar = toFixed2(ventaCredito.montoFinanciado);
 
     const numCuotas = transaction.cuotes || cuotas.length || "_____";
@@ -297,7 +297,7 @@ const generarContratoCompraventaFinanciamientoPDF = async (req, res) => {
         },
         {
           titulo: "CLAUSULA SEGUNDA – PRECIO:",
-          texto: `Las condiciones económicas son: Precio de venta B/.${precioVenta}; Monto financiado B/.${montoFinanciado}; Monto total B/.${montoTotal}; Otros cargos B/.${otrosCargos}; Abono inicial (si aplica) B/.${abonoInicial}; Monto total a financiar B/.${montoAFinanciar}.`,
+          texto: `Las condiciones económicas son: Precio de venta B/.${precioVenta}; Monto financiado B/.${montoTotal }; Monto total B/.${montoFinanciado}; Otros cargos B/.${otrosCargos}; Abono inicial (si aplica) B/.${abonoInicial}; Monto total a financiar B/.${montoAFinanciar}.`,
         },
         {
           titulo: "CLAUSULA TERCERA – CUOTAS:",
