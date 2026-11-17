@@ -1155,17 +1155,15 @@ const createAmortizado = catchError(async (req, res) => {
       });
     }
 
-    const transaction = await Transaction.findByPk(
-      transactionId,
-      {
-        include: [
-          {
-            model: Cuote,
-            as: "transactionCuotes",
-          },],
-        transaction: t,
-      }
-    );
+    const transaction = await Transaction.findByPk(transactionId, {
+      include: [
+        {
+          model: Cuote,
+          as: "transactionCuotes",
+        },
+      ],
+      transaction: t,
+    });
 
     if (!transaction) {
       await t.rollback();
@@ -1201,33 +1199,60 @@ const createAmortizado = catchError(async (req, res) => {
       { transaction: t }
     );
 
-    // =========================
-    // Actualizar cuotas
-    // =========================
-    for (const cuota of preview.cuotas) {
-      await Cuote.update(
-        {
-          capitalAmount: cuota.capitalPendiente,
-          amountInterest: cuota.interesPendiente,
-          totalPaid: cuota.totalPaid,
-          status: cuota.status,
-        },
-        {
-          where: { id: cuota.id },
-          transaction: t,
-        }
-      );
+    // Mapa de cuotas actuales (para saber cuáles se tocaron en este pago)
+    const cuotasActuales = {};
+    for (const c of transaction.transactionCuotes || []) {
+      cuotasActuales[c.id] = c;
     }
 
-        // =========================
+    // =========================
+    // Actualizar cuotas + asignar paymentId
+    // =========================
+    for (const cuota of preview.cuotas || []) {
+      if (!cuota?.id) continue;
+
+      const anterior = cuotasActuales[cuota.id];
+      const totalPaidNuevo = Number(cuota.totalPaid || 0);
+      const totalPaidViejo = Number(anterior?.totalPaid || 0);
+      const statusNuevo = cuota.status;
+      const statusViejo = anterior?.status;
+
+      // Se considera “pagada en este pago” si subió totalPaid o cambió a deposit/paid
+      const sePagoEnEste =
+        totalPaidNuevo > totalPaidViejo ||
+        (statusNuevo !== statusViejo &&
+          (statusNuevo === "paid" || statusNuevo === "deposit"));
+
+      const dataUpdate = {
+        amountInterest: cuota.interesPendiente,
+        totalPaid: cuota.totalPaid,
+        status: cuota.status,
+      };
+
+      // Si en tu lógica también actualizas capitalAmount desde el preview:
+      // if (cuota.capitalPendiente != null) {
+      //   dataUpdate.capitalAmount = cuota.capitalPendiente;
+      // }
+
+      if (sePagoEnEste) {
+        dataUpdate.paymentId = newPayment.id;
+      }
+
+      await Cuote.update(dataUpdate, {
+        where: { id: cuota.id },
+        transaction: t,
+      });
+    }
+
+    // =========================
     // Recalcular capital pendiente
     // =========================
-    const capitalPendiente = preview.cuotas.reduce(
+    const capitalPendiente = (preview.cuotas || []).reduce(
       (acc, c) => acc + Number(c.capitalPendiente || 0),
       0
     );
 
-    const cuotasPendientes = preview.cuotas.filter(
+    const cuotasPendientes = (preview.cuotas || []).filter(
       (c) => c.status !== "paid"
     );
 
@@ -1243,11 +1268,6 @@ const createAmortizado = catchError(async (req, res) => {
       morosidadAmount: nuevaMora,
     };
 
-    // Si usas balance como capital + mora (opcional)
-    // nuevaData.balance = Number(
-    //   (nuevaData.capital + nuevaData.morosidadAmount).toFixed(2)
-    // );
-
     nuevaData.nextPaymentDate = getNextPaymentDate(
       transaction.nextPaymentDate,
       paymentDate
@@ -1256,8 +1276,6 @@ const createAmortizado = catchError(async (req, res) => {
     if (cuotasPendientes.length === 0) {
       nuevaData.status = "paid";
       nuevaData.capital = 0;
-      // si liquidó todo, la mora también debería quedar en 0
-      // (solo si realmente se pagó toda; si no, deja nuevaMora)
       if (nuevaMora === 0) {
         nuevaData.morosidadAmount = 0;
       }
@@ -1292,7 +1310,6 @@ const createAmortizado = catchError(async (req, res) => {
       nuevoSaldo: nuevaData.capital,
       creadoPor: user,
     });
-
   } catch (error) {
     console.error("ERROR createAmortizado:", error);
     await t.rollback();
@@ -1300,8 +1317,6 @@ const createAmortizado = catchError(async (req, res) => {
       message: error.message,
       error: error.name,
     });
-    await t.rollback();
-    throw error;
   }
 });
 
