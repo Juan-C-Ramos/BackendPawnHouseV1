@@ -7,7 +7,8 @@ const {
   User,
   Payment,
   DisbursementAccount,
-  PaymentUsers
+  PaymentUsers,
+  HistorialSaldo
 } = require('../models'); // ajusta la ruta según tu proyecto
 const sequelize = require('../utils/connection');
 
@@ -608,6 +609,43 @@ const { Op } = require("sequelize");
 // BUSCAR (nombre, cédula, factura, N° venta)
 // GET /ventas-credito/search?q=texto
 // =====================
+
+
+const attachHistorialToPayments = async (payments = []) => {
+  if (!payments.length) return payments;
+
+  const ids = payments
+    .map((p) => p.id)
+    .filter(Boolean);
+
+  if (!ids.length) return payments;
+
+  const historiales = await HistorialSaldo.findAll({
+    where: {
+      pagoId: { [Op.in]: ids },
+    },
+  });
+
+  // Si puede haber más de uno por pago, agrupa en array
+  const byPagoId = {};
+  for (const h of historiales) {
+    const plain = h.toJSON ? h.toJSON() : h;
+    // un historial por pago (el más reciente si hay varios)
+    if (!byPagoId[plain.pagoId]) {
+      byPagoId[plain.pagoId] = plain;
+    }
+  }
+
+  return payments.map((p) => {
+    const plain = p.toJSON ? p.toJSON() : { ...p };
+    return {
+      ...plain,
+      historialSaldo: byPagoId[plain.id] || null,
+    };
+  });
+};
+
+
 const search = async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
@@ -652,36 +690,41 @@ const search = async (req, res) => {
     });
 
     // Respuesta liviana para el listado del buscador
-    const mapped = ventas.map((v) => {
-      const tx = v.transaction || {};
-      const customer = tx.customer || null;
+    const mapped = [];
 
-      return {
-        id: v.id, // id de VentasCredito (para getById)
-        transactionId: tx.id, // id de Transaction (para pagos)
-        nombre:
-          v.nombre ||
-          (customer
-            ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim()
-            : "Sin nombre"),
-        facturaNumero: v.facturaNumero,
-        ventaCreditoNumero: v.ventaCreditoNumero,
-        estado: v.estado,
-        status: tx.status,
-        balance: tx.balance,
-        customer: customer
-          ? {
-              id: customer.id,
-              firstName: customer.firstName,
-              lastName: customer.lastName,
-              numberID: customer.numberID,
-              phone: customer.phone,
-            }
-          : null,
-      };
-    });
+for (const v of ventas) {
+  const tx = v.transaction || {};
+  const customer = tx.customer || null;
+  const paymentsRaw = tx.Payments || tx.payments || [];
+  const payments = await attachHistorialToPayments(paymentsRaw);
 
-    return res.status(200).json(mapped);
+  mapped.push({
+    id: v.id,
+    transactionId: tx.id,
+    nombre:
+      v.nombre ||
+      (customer
+        ? `${customer.firstName || ""} ${customer.lastName || ""}`.trim()
+        : "Sin nombre"),
+    facturaNumero: v.facturaNumero,
+    ventaCreditoNumero: v.ventaCreditoNumero,
+    estado: v.estado,
+    status: tx.status,
+    balance: tx.balance,
+    customer: customer
+      ? {
+          id: customer.id,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          numberID: customer.numberID,
+          phone: customer.phone,
+        }
+      : null,
+    payments, // cada uno con historialSaldo
+  });
+}
+
+return res.status(200).json(mapped);
   } catch (error) {
     console.error("Error en search ventas-credito:", error);
     return res.status(500).json({

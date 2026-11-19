@@ -306,13 +306,9 @@ const remove = async (req, res) => {
  */
 const update = async (req, res) => {
   try {
-
-    const payment = await Payment.findByPk(
-      req.params.id,
-      {
-        include: [Transaction],
-      }
-    );
+    const payment = await Payment.findByPk(req.params.id, {
+      include: [Transaction],
+    });
 
     if (!payment) {
       return res.status(404).json({
@@ -322,86 +318,129 @@ const update = async (req, res) => {
 
     const transaction = payment.transaction;
 
-    // =====================================
-    // DESHACER EL PAGO ANTERIOR
-    // =====================================
+    if (!transaction) {
+      return res.status(400).json({
+        message: "El pago no tiene transacción asociada",
+      });
+    }
 
-    transaction.capital =
-      Number(transaction.capital || 0) +
-      Number(payment.capital || 0);
-
-    transaction.morosidadAmount =
-      Number(transaction.morosidadAmount || 0) +
-      Number(payment.layPaymentFee || 0);
+    const historialBody = req.body.historial; // opcional
 
     // =====================================
-    // APLICAR NUEVO PAGO
+    // DESHACER PAGO ANTERIOR + APLICAR NUEVO
     // =====================================
 
-    transaction.capital = Math.max(
-      transaction.capital -
-        Number(req.body.capital || 0),
-      0
-    );
+    if (historialBody) {
+      // Valores enviados desde el front
+      const capitalAnterior = Number(historialBody.capitalAnterior ?? payment.capital ?? 0);
+      const interesAnterior = Number(
+        historialBody.interesAnterior ?? payment.interestAmount ?? 0
+      );
+      const capitalNuevo = Number(
+        historialBody.capitalNuevo ?? req.body.capital ?? 0
+      );
+      const interesNuevo = Number(
+        historialBody.interesNuevo ?? req.body.interestAmount ?? 0
+      );
+      const moraAnterior = Number(payment.layPaymentFee || 0);
+      const moraNueva = Number(req.body.layPaymentFee ?? 0);
 
-    transaction.morosidadAmount = Math.max(
-      transaction.morosidadAmount -
-        Number(req.body.layPaymentFee || 0),
-      0
-    );
+      // 1) Deshacer efecto del pago viejo (capital + mora)
+      transaction.capital =
+        Number(transaction.capital || 0) + capitalAnterior;
+
+      transaction.morosidadAmount =
+        Number(transaction.morosidadAmount || 0) + moraAnterior;
+
+      // Si guardas interés pendiente en la TX, descomenta:
+      // transaction.interestAmount =
+      //   Number(transaction.interestAmount || 0) + interesAnterior;
+
+      // 2) Aplicar el pago nuevo
+      transaction.capital = Math.max(
+        Number(transaction.capital) - capitalNuevo,
+        0
+      );
+
+      transaction.morosidadAmount = Math.max(
+        Number(transaction.morosidadAmount) - moraNueva,
+        0
+      );
+
+      // transaction.interestAmount = Math.max(
+      //   Number(transaction.interestAmount || 0) - interesNuevo,
+      //   0
+      // );
+    } else {
+      // Comportamiento actual (sin historial en el body)
+      transaction.capital =
+        Number(transaction.capital || 0) + Number(payment.capital || 0);
+
+      transaction.morosidadAmount =
+        Number(transaction.morosidadAmount || 0) +
+        Number(payment.layPaymentFee || 0);
+
+      transaction.capital = Math.max(
+        transaction.capital - Number(req.body.capital || 0),
+        0
+      );
+
+      transaction.morosidadAmount = Math.max(
+        transaction.morosidadAmount - Number(req.body.layPaymentFee || 0),
+        0
+      );
+    }
 
     await transaction.save();
 
     // =====================================
     // ACTUALIZAR PAGO
     // =====================================
-
     await payment.update({
       amount: req.body.amount,
       capital: req.body.capital,
-      interestAmount:
-        req.body.interestAmount,
-      layPaymentFee:
-        req.body.layPaymentFee,
+      interestAmount: req.body.interestAmount,
+      layPaymentFee: req.body.layPaymentFee,
       itbms: req.body.itbms,
-      paymentDate:
-        req.body.paymentDate,
-      paymentMethod:
-        req.body.paymentMethod,
+      paymentDate: req.body.paymentDate,
+      paymentMethod: req.body.paymentMethod,
     });
 
     // =====================================
-    // ACTUALIZAR HISTORIAL
+    // ACTUALIZAR HISTORIAL DE SALDO
     // =====================================
-
-    const historial =
-      await HistorialSaldo.findOne({
-        where: {
-          pagoId: payment.id,
-        },
-      });
+    const historial = await HistorialSaldo.findOne({
+      where: { pagoId: payment.id },
+    });
 
     if (historial) {
-      historial.nuevoSaldo =
-        transaction.capital;
+      historial.nuevoSaldo = transaction.capital;
+
+      // Si el body trae historial, puedes registrar también el detalle
+      if (historialBody) {
+        // Solo si tu modelo tiene estos campos; si no, quítalos
+        if (historialBody.capitalAnterior != null) {
+          historial.saldoAnterior =
+            historial.saldoAnterior ?? historialBody.capitalAnterior;
+        }
+      }
 
       await historial.save();
     }
 
     return res.json({
-      message:
-        "Pago actualizado correctamente",
+      message: "Pago actualizado correctamente",
+      data: {
+        payment,
+        capitalTx: transaction.capital,
+        morosidadTx: transaction.morosidadAmount,
+      },
     });
-
   } catch (error) {
-    console.error(
-      "Error en update:",
-      error
-    );
-
+    console.error("Error en update:", error);
     return res.status(500).json({
-      message:
-        "Error al actualizar el pago",
+      message: "Error al actualizar el pago",
+      error: error.message,
     });
   }
 };
@@ -1208,7 +1247,7 @@ const createAmortizado = catchError(async (req, res) => {
     // =========================
     // Actualizar cuotas + asignar paymentId
     // =========================
-    for (const cuota of preview.cuotas || []) {
+        for (const cuota of preview.cuotas || []) {
       if (!cuota?.id) continue;
 
       const anterior = cuotasActuales[cuota.id];
@@ -1217,22 +1256,17 @@ const createAmortizado = catchError(async (req, res) => {
       const statusNuevo = cuota.status;
       const statusViejo = anterior?.status;
 
-      // Se considera “pagada en este pago” si subió totalPaid o cambió a deposit/paid
       const sePagoEnEste =
         totalPaidNuevo > totalPaidViejo ||
         (statusNuevo !== statusViejo &&
           (statusNuevo === "paid" || statusNuevo === "deposit"));
 
       const dataUpdate = {
-        amountInterest: cuota.interesPendiente,
-        totalPaid: cuota.totalPaid,
+        capitalAmount: Number(cuota.capitalPendiente ?? 0), // ← pendiente real
+        amountInterest: Number(cuota.interesPendiente ?? 0),
+        totalPaid: Number(cuota.totalPaid ?? 0),
         status: cuota.status,
       };
-
-      // Si en tu lógica también actualizas capitalAmount desde el preview:
-      // if (cuota.capitalPendiente != null) {
-      //   dataUpdate.capitalAmount = cuota.capitalPendiente;
-      // }
 
       if (sePagoEnEste) {
         dataUpdate.paymentId = newPayment.id;
